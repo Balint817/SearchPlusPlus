@@ -12,7 +12,7 @@ All advanced searches made using this mod must be preceded by `search:`
 
 **2 types of search terms:**
 - `key`, such as `cinema`
-- `key:value`, such as `title:"Shinsou Masui"` or `diff:"11-12"`
+- `key:value`, such as `title:"Shinsou Masui"` or `diff:11-12`
 - some can be both
 
 **Range syntax for difficulty filters:**
