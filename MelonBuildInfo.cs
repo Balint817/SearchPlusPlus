@@ -12,6 +12,6 @@
 
         public const string Version = "1.0.0";
 
-        public const string DownloadLink = "";
+        public const string DownloadLink = "https://github.com/Balint817/SearchPlusPlus";
     }
 }
