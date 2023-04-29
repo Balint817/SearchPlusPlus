@@ -27,7 +27,6 @@ namespace SearchPlusPlus
         internal static void Prefix()
         {
             SearchPatch.searchError = null;
-            MelonLogger.Msg(Utils.Separator);
             string text = GlobalDataBase.s_DbMusicTag.m_FindKeyword;
             //highScores = DataHelper.highest;
 
@@ -48,6 +47,7 @@ namespace SearchPlusPlus
                 NullifyAdvancedSearch();
                 return;
             }
+            MelonLogger.Msg(Utils.Separator);
 
             if (text.Length < SearchPatch.startString.Length + 1)
             {
@@ -113,7 +113,6 @@ namespace SearchPlusPlus
         {
             var result = new List<List<KeyValuePair<string, string>>>();
 
-
             foreach (var group in input)
             {
                 var combineOrConditions = new Dictionary<string, HashSet<string>>();
@@ -164,7 +163,7 @@ namespace SearchPlusPlus
             var convertGroup = group.Select(x => new KeyValuePair<string, List<string>>(x.Key, x.Value.ToList())).ToDictionary(x => x.Key, x => x.Value);
             foreach (var item in convertGroup)
             {
-                switch (SearchPatch.validFilters[item.Key])
+                switch (SearchPatch.validFilters[item.Key.StartsWith("-") ? item.Key.Substring(1) : item.Key])
                 {
                     case -3:
                     case 3:
@@ -346,13 +345,20 @@ namespace SearchPlusPlus
 
         internal static string FormatValue(string key, string value)
         {
-            switch (Math.Abs(SearchPatch.validFilters[key]))
+            try
             {
-                case 1:
-                case 3:
-                    return value;
-                default:
-                    return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+                switch (Math.Abs(SearchPatch.validFilters[key.StartsWith("-") ? key.Substring(1) : key]))
+                {
+                    case 1:
+                    case 3:
+                        return value;
+                    default:
+                        return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+                }
+            }
+            catch (Exception)
+            {
+                return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
             }
         }
         internal static void NullifyAdvancedSearch()
