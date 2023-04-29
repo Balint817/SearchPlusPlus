@@ -68,8 +68,15 @@
     <Reference Include="UnhollowerBaseLib">
       <HintPath>D:\Steam\steamapps\common\Muse Dash\MelonLoader\Managed\UnhollowerBaseLib.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\Steam\steamapps\common\Muse Dash\MelonLoader\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="RefreshPatch.cs" />
+    <Compile Include="SearchPatch.cs" />
+    <Compile Include="Utils.cs" />
     <Compile Include="ModMain.cs" />
     <Compile Include="MelonBuildInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
