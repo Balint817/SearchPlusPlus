@@ -27,11 +27,29 @@ namespace SearchPlusPlus
             }
         }
 
+        internal static bool ForceErrorCheck
+        {
+            get
+            {
+                return forceErrorCheckToggle.Value;
+            }
+        }
+
+        internal static bool RecursionEnabled
+        {
+            get
+            {
+                return recursionToggle.Value;
+            }
+        }
+
         internal static Dictionary<string, List<List<KeyValuePair<string, string>>>> customTags = new Dictionary<string, List<List<KeyValuePair<string, string>>>>();
 
         internal static MelonPreferences_Entry<bool> hqToggle;
 
         internal static MelonPreferences_Entry<bool> forceErrorCheckToggle;
+
+        internal static MelonPreferences_Entry<bool> recursionToggle;
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
         {
             
@@ -46,9 +64,10 @@ namespace SearchPlusPlus
         {
             var category = MelonPreferences.CreateCategory("SearchPlusPlus");
             category.SetFilePath("UserData/SearchPlusPlus.cfg");
-            hqToggle = category.CreateEntry<bool>("HQSearchToggle", false, "EnableRankedTag", "Whether the \"ranked\" tag is enabled.");
-            forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", false, "ForceErrorChecks", "If enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve performance.");
-            var customTagsEntry = category.CreateEntry<Dictionary<string, string>>("CustomSearchTags", new Dictionary<string, string>(), "CustomSearchTags", "Define custom tags here. (Custom tags may not reference other custom tags)");
+            hqToggle = category.CreateEntry<bool>("HQSearchToggle", false, "EnableRankedTag", "\nWhether the \"ranked\" tag is enabled.");
+            forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", true, "ForceErrorChecks", "\nIf enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve search times.");
+            recursionToggle = category.CreateEntry<bool>("RecursionToggle", false, "AllowCustomReference", "\nIf disabled, will prevent you from using 'def' inside 'eval' or custom tag definitions.\nDisabled by default so you don't accidentally create a self-reference and freeze the game.\nUse only if you know what you're doing!");
+            var customTagsEntry = category.CreateEntry<Dictionary<string, string>>("CustomSearchTags", new Dictionary<string, string>(), "CustomSearchTags", "\nDefine custom tags here. (Custom tags may not reference other custom tags)");
 
             ServicePointManager.DefaultConnectionLimit = 100;
             WebRequest.DefaultWebProxy = null;
@@ -159,10 +178,10 @@ namespace SearchPlusPlus
                 {
                     foreach (var term in group)
                     {
-                        if (term.Key == "define")
+                        if (term.Key == "def" && !RecursionEnabled)
                         {
                             MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                            MelonLogger.Msg(ConsoleColor.Red, "input error: the \"define\" tag is not allowed in this context");
+                            MelonLogger.Msg(ConsoleColor.Red, "input error: the \"def\" tag is not allowed in this context");
                         }
                         if (!SearchPatch.CheckFilter(term, out errors))
                         {

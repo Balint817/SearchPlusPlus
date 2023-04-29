@@ -303,7 +303,7 @@ namespace SearchPlusPlus
             {
                 return SearchPatch.TagComplexity[tag.Key];
             }
-            if (tag.Key == "define")
+            if (tag.Key == "def")
             {
                 if (ModMain.customTags.ContainsKey(tag.Value))
                 {
@@ -311,7 +311,7 @@ namespace SearchPlusPlus
                 }
                 return 1;
             }
-            if (tag.Key == "evaluate")
+            if (tag.Key == "eval")
             {
                 return tag.Value.Length == 0 ? 1 : Math.Pow(tag.Value.Length, 0.80);
             }

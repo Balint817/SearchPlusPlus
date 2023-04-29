@@ -493,8 +493,8 @@ namespace SearchPlusPlus
             ["unplayed"] = -3,
             ["fc"] = -3,
             ["ap"] = -3,
-            ["define"] = 2,
-            ["evaluate"] = 2,
+            ["def"] = 2,
+            ["eval"] = 2,
             ["custom"] = 0,
         };
         
@@ -590,7 +590,7 @@ namespace SearchPlusPlus
 
             __result = false;
 
-            switch (RunFilters(tagGroups, peroString, musicInfo, true))
+            switch (RunFilters(tagGroups, peroString, musicInfo))
             {
                 case null:
                     return false;
@@ -623,6 +623,11 @@ namespace SearchPlusPlus
             {
                 foreach (var term in group)
                 {
+                    if (term.Key == "def" && !ModMain.RecursionEnabled)
+                    {
+                        searchError = parserText + "input error: the \"def\" tag is not allowed in this context";
+                        return null;
+                    }
                     if (!CheckFilter(term, out errors))
                     {
                         goto breakLoop;
@@ -640,8 +645,7 @@ namespace SearchPlusPlus
             searchError = parserText + errors + $" (tag no. {groupIdx + 1})";
             return null;
         }
-
-        internal static bool? RunFilters(List<List<KeyValuePair<string, string>>> input, PeroString peroString, MusicInfo musicInfo, bool allowDefine = false)
+        internal static bool? RunFilters(List<List<KeyValuePair<string, string>>> input, PeroString peroString, MusicInfo musicInfo)
         {
             foreach (var group in input)
             {
@@ -654,6 +658,10 @@ namespace SearchPlusPlus
                         return null;
                     }
                     groupResult |= (bool)result;
+                    if (!ModMain.ForceErrorCheck && groupResult)
+                    {
+                        break;
+                    }
                 }
                 if (!groupResult)
                 {
@@ -662,7 +670,6 @@ namespace SearchPlusPlus
             }
             return true;
         }
-
         internal static KeyValuePair<bool, string[]> TryParseInputWithLogs(string containsText, out List<List<KeyValuePair<string, string>>> tagGroups)
         {
             tagGroups = new List<List<KeyValuePair<string, string>>>() { new List<KeyValuePair<string, string>>() };
@@ -860,7 +867,6 @@ namespace SearchPlusPlus
             }
             return new KeyValuePair<bool, string[]>(true, null);
         }
-
         internal static bool LowerContains(this PeroString peroString, string compareText, string containsText)
         {
             compareText = compareText ?? "";
@@ -870,7 +876,6 @@ namespace SearchPlusPlus
             peroString.ToLower();
             return (peroString.Contains(containsText) || compareText.ToLower().Contains(containsText));
         }
-
         internal static bool CheckFilter(KeyValuePair<string, string> filter, out string errors)
         {
             errors = null;
@@ -993,7 +998,6 @@ namespace SearchPlusPlus
             }
             return true;
         }
-
         internal static bool? HandleFilter(PeroString peroString, MusicInfo musicInfo, KeyValuePair<string, string> filter)
         {
             string key = filter.Key;
@@ -1088,11 +1092,11 @@ namespace SearchPlusPlus
                         }
                         return EvalAP(musicInfo, value) ^ negate;
                     }
-                case "define":
+                case "def":
                     {
                         return EvalDefine(peroString, musicInfo, value) ^ negate;
                     }
-                case "evaluate":
+                case "eval":
                     {
                         return EvalRuntime(peroString, musicInfo, value) ^ negate;
                     }
@@ -1102,15 +1106,14 @@ namespace SearchPlusPlus
                     }
 
             }
+            searchError = $"search error: received unknown key \"{key}\"";
             return null;
         }
-
-        private static bool EvalCustom(MusicInfo musicInfo)
+        internal static bool EvalCustom(MusicInfo musicInfo)
         {
             return AlbumManager.LoadedAlbumsByUid.ContainsKey(musicInfo.uid);
         }
-
-        private static bool? EvalRuntime(PeroString peroString, MusicInfo musicInfo, string value)
+        internal static bool? EvalRuntime(PeroString peroString, MusicInfo musicInfo, string value)
         {
             var result = RuntimeParser(value);
             if (result == null)
@@ -1119,16 +1122,16 @@ namespace SearchPlusPlus
             }
             return RunFilters(result, peroString, musicInfo);
         }
-        private static bool? EvalDefine(PeroString ps, MusicInfo musicInfo, string value)
+        internal static bool? EvalDefine(PeroString ps, MusicInfo musicInfo, string value)
         {
             if (!ModMain.customTags.ContainsKey(value))
             {
+                searchError = $"search error: unknown custom tag \"{value}\"";
                 return null;
             }
             return RunFilters(ModMain.customTags[value], ps, musicInfo);
         }
-
-        private static bool? EvalFC(MusicInfo musicInfo, string value)
+        internal static bool? EvalFC(MusicInfo musicInfo, string value)
         {
             if (value == "?")
             {
@@ -1151,13 +1154,13 @@ namespace SearchPlusPlus
             int diff = int.Parse(value);
             if (diff < 1 || diff > 5)
             {
+                searchError = $"search error: '{diff}' is not a valid difficulty";
                 return null;
             }
             return RefreshPatch.fullCombos.Contains(musicInfo.uid + "_" + diff);
 
         }
-
-        private static bool? EvalAP(MusicInfo musicInfo, string value)
+        internal static bool? EvalAP(MusicInfo musicInfo, string value)
         {
             if (value == "?")
             {
@@ -1180,12 +1183,12 @@ namespace SearchPlusPlus
             int diff = int.Parse(value);
             if (diff < 1 || diff > 5)
             {
+                searchError = $"search error: '{diff}' is not a valid difficulty";
                 return null;
             }
             string s = musicInfo.uid + "_" + diff;
             return RefreshPatch.highScores.Any(x => (string)x["uid"] == s && (float)x["accuracy"] == 1);
         }
-
         internal static bool EvalFC(MusicInfo musicInfo)
         {
             bool isCustom = EvalCustom(musicInfo);
@@ -1250,7 +1253,6 @@ namespace SearchPlusPlus
             }
             return true;
         }
-
         internal static bool? EvalUnplayed(MusicInfo musicInfo)
         {
             string s = musicInfo.uid + "_";
@@ -1280,11 +1282,11 @@ namespace SearchPlusPlus
             int diff = int.Parse(value);
             if (diff < 1 || diff > 5)
             {
+                searchError = $"search error: '{diff}' is not a valid difficulty";
                 return null;
             }
             return CheckUnplayed(musicInfo, diff);
         }
-
         internal static bool CheckUnplayed(MusicInfo musicInfo, int diff)
         {
             var musicDiff = musicInfo.GetMusicLevelStringByDiff(diff, false);
@@ -1307,7 +1309,6 @@ namespace SearchPlusPlus
         {
             return (EvalTag(pStr, musicInfo, filter) || EvalTitle(pStr, musicInfo, filter) || EvalAuthor(pStr, musicInfo, filter) || EvalDesigner(pStr, musicInfo, filter));
         }
-
         internal static bool EvalAnyX(PeroString pStr, MusicInfo musicInfo, string filter)
         {
             if (searchTags.ContainsKey(musicInfo.uid))
@@ -1322,7 +1323,6 @@ namespace SearchPlusPlus
             }
             return EvalAny(pStr, musicInfo, filter);
         }
-
         internal static bool EvalTag(PeroString pStr, MusicInfo musicInfo, string filter)
         {
             if (EvalCustom(musicInfo))
@@ -1406,6 +1406,7 @@ namespace SearchPlusPlus
             switch (filter.Length)
             {
                 case 0:
+                    searchError = $"search error: received an empty string as 'scene'";
                     return null;
                 case 1:
                     sceneFilter = '0'+filter;
@@ -1415,8 +1416,14 @@ namespace SearchPlusPlus
                     break;
                 default:
                     var t = validScenes.Keys.Where(x => x.Contains(filter)).ToArray();
-                    if (t.Length != 1)
+                    if (t.Length > 1)
                     {
+                        searchError = $"search error: scene filter search \"{t}\" is ambiguous between {string.Join(", ", t.Reverse().Skip(1).Reverse().Select(x => '"' + x + '"'))} and \"{t.Last()}\"";
+                        return null;
+                    }
+                    if (t.Length < 1)
+                    {
+                        searchError = $"search error: scene filter \"{t}\" couldn't be found";
                         return null;
                     }
                     sceneFilter = validScenes[t[0]];
@@ -1428,7 +1435,6 @@ namespace SearchPlusPlus
             }
             return false;
         }
-
         internal static bool? EvalBPM(MusicInfo musicInfo, string filter)
         {
             if (!double.TryParse(musicInfo.bpm.Replace(",", "."), out double x))
@@ -1441,6 +1447,7 @@ namespace SearchPlusPlus
             }
             if (!EvalRange(filter, out double bpmStart, out double bpmEnd))
             {
+                searchError = $"search error: failed to evaluate range \"{filter}\"";
                 return null;
             }
             if (bpmStart <= x && x <= bpmEnd)
@@ -1449,7 +1456,6 @@ namespace SearchPlusPlus
             }
             return false;
         }
-
         internal static bool EvalHidden(MusicInfo musicInfo, int type)
         {
             var musicDiff = musicInfo.GetMusicLevelStringByDiff(type, false);
@@ -1459,13 +1465,10 @@ namespace SearchPlusPlus
             }
             return true;
         }
-
         internal static bool? EvalHidden(MusicInfo musicInfo, string filter)
         {
             return EvalDiff(musicInfo, filter, 1);
         }
-
-
         internal static bool? EvalDiff(MusicInfo musicInfo, string filter, byte type)
         {
             bool diffIncludeString = false;
@@ -1486,6 +1489,7 @@ namespace SearchPlusPlus
             {
                 if (!EvalRange(filter, out rangeStart, out rangeEnd))
                 {
+                    searchError = $"search error: failed to evaluate range \"{filter}\"";
                     return null;
                 }
             }
@@ -1520,7 +1524,6 @@ namespace SearchPlusPlus
             return false;
 
         }
-
         internal static bool EvalRange(string expression, out double start, out double end)
         {
             start = double.NaN;
@@ -1580,7 +1583,5 @@ namespace SearchPlusPlus
             }
             return true;
         }
-
-
     }
 }
