@@ -80,8 +80,6 @@ All advanced searches made using this mod must be preceded by `search:`
 - `def:string`
 	- See the `Custom Tags` section.
 
-Putting `?` in a range will search for values that cannot be converted to a number, such as when the difficulty of a song is `?`.
-
 **Strings:**
 - Searching terms with spaces must be done in a string: `key:"value with spaces"`
 - Searching quotes requires you to prefix them with a backslash: `key:"a \"quotes\" b`
