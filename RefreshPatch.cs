@@ -353,12 +353,20 @@ namespace SearchPlusPlus
                     case 3:
                         return value;
                     default:
-                        return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+                        if (value.Contains(' ') || value.Contains('"') || value.Contains('|') || value.Contains(':'))
+                        {
+                            return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+                        }
+                        return value;
                 }
             }
             catch (Exception)
             {
-                return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+                if (value.Contains(' ') || value.Contains('"') || value.Contains('|') || value.Contains(':'))
+                {
+                    return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+                }
+                return value;
             }
         }
         internal static void NullifyAdvancedSearch()
