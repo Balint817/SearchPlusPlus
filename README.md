@@ -24,45 +24,104 @@ All advanced searches made using this mod must be preceded by `search:`
 
 **All tags, seperated by spaces, must pass in order for a song to pass the filter.**
 
-**A list of all search terms:**
-- `diff:range` => check for visible difficulty in the given range, supports `?`
-- `bpm:range` => if bpm in json is in the given range, supports `?`
-- `hidden` => if song has hidden
-- `hidden:range` => check for hidden in the given range, supports `?`
-- `touhou` => if there's a touhou hidden
-- `cinema` => if there's a cinema
-- `scene` => if the scene matches the filter, can be:
-	- a 1 digit number
-	- 2 character string, i.e. "01", "02", etc.
-	- the name of the scene
-- `design` => search for level designer
-- `author` => search for song author
-- `title` => search for song title
-- `tag` => search for a specific search tag (CustomAlbum's search tags)
-- `any` => searches `design`, `author`, `title`, `tag` to see if any matches
-- `anyx`
-	- uses custom search tags made by MNight4
-	- also runs the same thing as `any`
+### **A list of all search terms:**
+- `diff:range`
+	- Check for a visible difficulty in the given range
+	- Supports `?` => in case the difficulty isn't a number
+- `bpm:range`
+	- Check if bpm in json is in the given range
+	- Supports `?` => in case the bpm isn't given as a number
+- `hidden`
+	- Check if song has hidden
+- `hidden:range`
+	- Check for hidden in the given range
+	- Supports `?` => in case the difficulty isn't a number
+- `touhou`
+	- Check if there's a touhou hidden
+- `cinema`
+	- Check if there's a cinema
+- `scene:string`
+	- Checks if the scene matches the filter, can be:
+		- a 1 digit number
+		- 2 character string, i.e. "01", "02", etc.
+		- The name of the scene
+- `design:string`
+	- Search for level designer
+- `author:string`
+	- Search for song author
+- `title:string`
+	- Search for song title
+- `tag:string`
+	- Search for a specific search tag (CustomAlbum's search tags)
+- `any:string`
+	- Short for `design:x|author:x|title:x|tag:x`
+- `anyx:string`
+	- Uses custom search tags made by MNight4
+	- Also runs the same thing as `any`
+- `unplayed`
+	- No difficulty of a song has any clears
+- `unplayed:integer`
+	- Given difficulty of a song has no clears (1-5)
+	- Supports `?` => selects highest difficulty
+- `fc`
+	- All difficulties of a song are FC-d (full combo)
+- `fc:integer`
+	- Given difficulty is FC-d (full combo)
+	- Supports `?` => selects highest difficulty
+- `ap`
+	- All difficulties of a song are AP-d (all perfect)
+- `ap:integer`
+	- Given difficulty is AP-d (all perfect)
+	- Supports `?` => selects highest difficulty
+- `custom`
+	- The song is a custom song
+- `eval:string`
+    - See the `Evaluate Tag` section
+- `def:string`
+	- See the `Custom Tags` section.
 
 Putting `?` in a range will search for values that cannot be converted to a number, such as when the difficulty of a song is `?`.
 
 **Strings:**
-- searching terms with spaces must be done in a string: `key:"value with spaces"`
-- searching quotes requires you to prefix them with a backslash: `key:"a \"quotes\" b`
-	- **from this point on, this will be referred to as "escaping a character"**
-	- **this can only be done inside strings (quoted searches)**
-- searching a backslash: `key:\`
-- searching a backslash inside a string requires you to escape it: `key:"\\"`
-- escaping any other character will make the backslash disappear:
+- Searching terms with spaces must be done in a string: `key:"value with spaces"`
+- Searching quotes requires you to prefix them with a backslash: `key:"a \"quotes\" b`
+	- **From this point on, this will be referred to as "escaping a character"**
+	- **This can only be done inside strings (quoted searches)**
+- Searching a backslash: `key:\`
+- Searching a backslash inside a string requires you to escape it: `key:"\\"`
+- Escaping any other character will make the backslash disappear:
 	- `key:"\a"` is the same as `key:"a"`
 
-**OR/AND operations**
+**AND/OR operations**
 - Seperating a tag by spaces as normal means that all tags must pass for a song to appear. This is an AND operation.
 - You can seperate tags by `|` instead of spaces (`Alt Gr` + `W` on qwertz-hu)
 - Doing this will make it so that only one of the connected tags have to pass in order for a song to pass. This is an OR operation.
 - This way, you can make groups of tags connected with `|`, e.g. OR operations, seperated by spaces, e.g. AND operations.
 - Example: `hidden:12|diff:12 bpm:100+`
 - This will search for songs that either have a hidden rated 12 OR a visible difficulty rated 12, AND the song's bpm must also be above 100;
+- Additionally, tag negation (`-tag`) binds more tightly than `|` or spaces.
+	- Example: `-hidden:12|diff:12 bpm:100+` => `(-hidden:12)|diff:12 bpm:100+`
 
+### **Evaluate Tag**
+- `eval:string`
+- The value inside will be evaluated as a seperate search
+- The tag can be nested (e.g. `eval:"eval:string"`)
+- This tag essentially allows you to nest `AND` operations inside `OR` (see the `AND/OR operations` section)
+- Keep in mind that unlike all other tags, this tag is parsed while searching, not before
+    - This makes the tag take more time to run
+
+### **Custom tags**
+- `def:string`
+- Similar to `eval` in some places
+- You can pre-define common searches in the config file of this mod (`SearchPlusPlus.cfg`)
+- This tag allows you to call upon these saved search terms.
+- This tag cannot appear inside an `eval` statement, nor can it appear inside another tag definition.
+- Reason:
+    - tag1 = "def:tag2|diff:1"
+    - tag2 = "def:tag1|diff:2"
+    - Search: `tag1 tag2`
+    - The tags referencing each other would turn into an infinite loop
+    - This not only makes it impossible to evaluate, it will also freeze the game.
+- This behavior can be toggled off, but make sure that you know what you're doing.
 
 # And that's all he wrote.
