@@ -764,7 +764,7 @@ namespace SearchPlusPlus
                         }
                         if (stringEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape (e.g. '\\\"') the previous quotation mark?" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
                         }
                         if (isString)
                         {
@@ -792,7 +792,7 @@ namespace SearchPlusPlus
                         }
                         if (stringEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape (e.g. '\\\"') the previous quotation mark?" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
                         }
                         if (isString)
                         {
@@ -818,7 +818,7 @@ namespace SearchPlusPlus
                         }
                         if (stringEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape (e.g. '\\\"') the previous quotation mark?" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
                         }
                         if (isString)
                         {
@@ -838,6 +838,10 @@ namespace SearchPlusPlus
                         }
                         if (isValue)
                         {
+                            if (value != null)
+                            {
+                                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, literal text cannot contain '{c}'.", $"did you mean to use a string and escape ('\\\"') the quotation mark?" });
+                            }
                             isString = true;
                             break;
                         }

@@ -4,7 +4,8 @@ An overly-complicated search engine mod for Muse Dash.
 
 ## Usage Guide
 
-**First things first, I recommend saving a bunch of filters you wrote beforehand, and copy-pasting them into the game as needed, cause typing these each time is annoying**
+**First things first, I recommend saving a bunch of filters you wrote beforehand, and copy-pasting them into the game as needed, cause typing these each time is annoying\
+Alternatively, check out the `Custom tags` section.**
 
 All advanced searches made using this mod must be preceded by `search:`
 
@@ -81,9 +82,9 @@ All advanced searches made using this mod must be preceded by `search:`
 	- See the `Custom Tags` section.
 
 **Strings:**
-- Searching terms with spaces must be done in a string: `key:"value with spaces"`
+- Searching terms with spaces must be done in a string (quotes): `key:"value with spaces"`
 - Searching quotes requires you to prefix them with a backslash: `key:"a \"quotes\" b`
-	- **From this point on, this will be referred to as "escaping a character"**
+	- **From this point on, this will be referred to as "escaping"**
 	- **This can only be done inside strings (quoted searches)**
 - Searching a backslash: `key:\`
 - Searching a backslash inside a string requires you to escape it: `key:"\\"`
@@ -97,16 +98,13 @@ All advanced searches made using this mod must be preceded by `search:`
 - This way, you can make groups of tags connected with `|`, e.g. OR operations, seperated by spaces, e.g. AND operations.
 - Example: `hidden:12|diff:12 bpm:100+`
 - This will search for songs that either have a hidden rated 12 OR a visible difficulty rated 12, AND the song's bpm must also be above 100;
-- Additionally, tag negation (`-tag`) binds more tightly than `|` or spaces.
-	- Example: `-hidden:12|diff:12 bpm:100+` => `(-hidden:12)|diff:12 bpm:100+`
 
 ### **Evaluate Tag**
 - `eval:string`
 - The value inside will be evaluated as a seperate search
-- The tag can be nested (e.g. `eval:"eval:string"`)
-- This tag essentially allows you to nest `AND` operations inside `OR` (see the `AND/OR operations` section)
+- The tag can be nested (e.g. `eval:"eval:tag1"`)
 - Keep in mind that unlike all other tags, this tag is parsed while searching, not before
-    - This makes the tag take more time to run
+    - e.g. the tag takes more time to run.
 
 ### **Custom tags**
 - `def:string`
@@ -121,5 +119,18 @@ All advanced searches made using this mod must be preceded by `search:`
     - The tags referencing each other would turn into an infinite loop
     - This not only makes it impossible to evaluate, it will also freeze the game.
 - This behavior can be toggled off, but make sure that you know what you're doing.
+
+### **Parsing info**
+- The characters `:`, `"`, `|` and spaces must be enclosed in a string to be searched.
+- The previous characters, along with `\`, cannot be part of a key, (such as a custom tag)
+- Keys cannot be strings.
+- Order of operations:
+    - Spaces bind the least tightly (executed last)
+    -`|` binds more tightly than spaces, less tightly than `:`
+    - `:` can only appear after a key, and `"` can only appear after `:`.
+    - `:` and strings (`""`) bind more tightly than `|`.
+    - Because strings have the highest binding force, the `eval` allows for further grouping of tags.
+        - This essentially results in the `eval` tag being similar to parentheses.
+        - Example: `eval:"tag1 tag2"|eval:"tag3 tag4"`
 
 # And that's all he wrote.
