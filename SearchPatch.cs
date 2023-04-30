@@ -586,6 +586,8 @@ namespace SearchPlusPlus
             switch (RunFilters(tagGroups, peroString, musicInfo))
             {
                 case null:
+                    isAdvancedSearch = false;
+                    MelonLogger.Msg(ConsoleColor.Red, searchError);
                     return false;
                 case false:
                     return false;

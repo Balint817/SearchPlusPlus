@@ -16,14 +16,6 @@ namespace SearchPlusPlus
         internal static List<Dictionary<string, object>> highScores;
 
         internal static List<string> fullCombos;
-
-        internal static void Postfix()
-        {
-            if (SearchPatch.searchError != null)
-            {
-                MelonLogger.Error(SearchPatch.searchError);
-            }
-        }
         internal static void Prefix()
         {
             SearchPatch.searchError = null;
