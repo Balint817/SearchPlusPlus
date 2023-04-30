@@ -1193,11 +1193,6 @@ namespace SearchPlusPlus
         {
             if (value.Contains(':'))
             {
-                if (!ModMain.RecursionEnabled)
-                {
-                    searchError = "syntax error: using values for custom tags is not allowed.";
-                    return null;
-                }
                 var splitValue = value.Split(defSplitChars, 2);
                 var t = RuntimeParser($"def:\"{splitValue[1].Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
                 if (t == null)
