@@ -50,10 +50,6 @@ namespace SearchPlusPlus
         internal static MelonPreferences_Entry<bool> forceErrorCheckToggle;
 
         internal static MelonPreferences_Entry<bool> recursionToggle;
-        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
-        {
-            
-        }
 
         public override void OnApplicationQuit()
         {
