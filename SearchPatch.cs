@@ -480,7 +480,7 @@ namespace SearchPlusPlus
             ["diff"] = 1,
             ["bpm"] = 1,
             ["hidden"] = -1,
-            ["touhou"] = 0,
+            ["touhou"] = -1,
             ["cinema"] = 0,
             ["scene"] = 2,
             ["design"] = 2,
@@ -490,9 +490,9 @@ namespace SearchPlusPlus
             ["any"] = 2,
             ["anyx"] = 2,
             ["ranked"] = 0,
-            ["unplayed"] = -3,
-            ["fc"] = -3,
-            ["ap"] = -3,
+            ["unplayed"] = -2,
+            ["fc"] = -2,
+            ["ap"] = -2,
             ["def"] = 2,
             ["eval"] = 2,
             ["custom"] = 0,
@@ -511,20 +511,13 @@ namespace SearchPlusPlus
             ["ap"] = 20
         };
 
-        internal static HashSet<string> allowsPlaceholder = new HashSet<string>
-        {
-            "diff",
-            "bpm",
-            "hidden",
-            "unplayed",
-        };
-
         internal static Dictionary<string, string[]> allowedWildcards = new Dictionary<string, string[]>
         {
 
             ["diff"] = new string[] {"?"},
             ["bpm"] = new string[] {"?"},
             ["hidden"] = new string[] {"?"},
+            ["touhou"] = new string[] {"?"},
             ["unplayed"] = new string[] {"?"},
             ["fc"] = new string[] {"?"},
             ["ap"] = new string[] {"?"},
@@ -1030,11 +1023,15 @@ namespace SearchPlusPlus
                         {
                             return EvalHidden(musicInfo, 4) ^ negate;
                         }
-                        return EvalHidden(musicInfo, value) ^ negate;
+                        return EvalHidden(musicInfo, value, 1) ^ negate;
                     }
                 case "touhou":
                     {
-                        return EvalHidden(musicInfo, 5) ^ negate;
+                        if (value == null)
+                        {
+                            return EvalHidden(musicInfo, 5) ^ negate;
+                        }
+                        return EvalHidden(musicInfo, value, 2) ^ negate;
                     }
                 case "scene":
                     {
@@ -1155,14 +1152,47 @@ namespace SearchPlusPlus
                 }
                 return EvalFC(musicInfo, i.ToString());
             }
-            int diff = int.Parse(value);
-            if (diff < 1 || diff > 5)
+            if (!EvalRange(value, out var start, out var end))
             {
-                searchError = $"search error: '{diff}' is not a valid difficulty";
                 return null;
             }
-            return RefreshPatch.fullCombos.Contains(musicInfo.uid + "_" + diff);
-
+            if (double.IsNegativeInfinity(start))
+            {
+                start = 1;
+                if (end < 1)
+                {
+                    searchError = $"search error: '{end}' is not a valid difficulty";
+                    return null;
+                }
+            }
+            if (double.IsPositiveInfinity(end))
+            {
+                end = 5;
+                if (start > 5)
+                {
+                    searchError = $"search error: '{start}' is not a valid difficulty";
+                    return null;
+                }
+            }
+            if (start < 1)
+            {
+                searchError = $"search error: '{start}' is not a valid difficulty";
+                return null;
+            }
+            if (end > 5)
+            {
+                searchError = $"search error: '{end}' is not a valid difficulty";
+                return null;
+            }
+            for (int i = (int)start; i <= end; i++)
+            {
+                string s = musicInfo.uid + "_" + i;
+                if (!RefreshPatch.fullCombos.Contains(s))
+                {
+                    return false;
+                };
+            }
+            return true;
         }
         internal static bool? EvalAP(MusicInfo musicInfo, string value)
         {
@@ -1184,14 +1214,47 @@ namespace SearchPlusPlus
                 }
                 return EvalAP(musicInfo, i.ToString());
             }
-            int diff = int.Parse(value);
-            if (diff < 1 || diff > 5)
+            if (!EvalRange(value, out var start, out var end))
             {
-                searchError = $"search error: '{diff}' is not a valid difficulty";
                 return null;
             }
-            string s = musicInfo.uid + "_" + diff;
-            return RefreshPatch.highScores.Any(x => (string)x["uid"] == s && (float)x["accuracy"] == 1);
+            if (double.IsNegativeInfinity(start))
+            {
+                start = 1;
+                if (end < 1)
+                {
+                    searchError = $"search error: '{end}' is not a valid difficulty";
+                    return null;
+                }
+            }
+            if (double.IsPositiveInfinity(end))
+            {
+                end = 5;
+                if (start > 5)
+                {
+                    searchError = $"search error: '{start}' is not a valid difficulty";
+                    return null;
+                }
+            }
+            if (start < 1)
+            {
+                searchError = $"search error: '{start}' is not a valid difficulty";
+                return null;
+            }
+            if (end > 5)
+            {
+                searchError = $"search error: '{end}' is not a valid difficulty";
+                return null;
+            }
+            for (int i = (int)start; i <= end; i++)
+            {
+                string s = musicInfo.uid + "_" + i;
+                if (!RefreshPatch.highScores.Any(x => (string)x["uid"] == s && (float)x["accuracy"] == 1))
+                {
+                    return false;
+                };
+            }
+            return true;
         }
         internal static bool EvalFC(MusicInfo musicInfo)
         {
@@ -1283,13 +1346,46 @@ namespace SearchPlusPlus
                 }
                 return CheckUnplayed(musicInfo, i);
             }
-            int diff = int.Parse(value);
-            if (diff < 1 || diff > 5)
+            if (!EvalRange(value, out var start, out var end))
             {
-                searchError = $"search error: '{diff}' is not a valid difficulty";
                 return null;
             }
-            return CheckUnplayed(musicInfo, diff);
+            if (double.IsNegativeInfinity(start))
+            {
+                start = 1;
+                if (end < 1)
+                {
+                    searchError = $"search error: '{end}' is not a valid difficulty";
+                    return null;
+                }
+            }
+            if (double.IsPositiveInfinity(end))
+            {
+                end = 5;
+                if (start > 5)
+                {
+                    searchError = $"search error: '{start}' is not a valid difficulty";
+                    return null;
+                }
+            }
+            if (start < 1)
+            {
+                searchError = $"search error: '{start}' is not a valid difficulty";
+                return null;
+            }
+            if (end > 5)
+            {
+                searchError = $"search error: '{end}' is not a valid difficulty";
+                return null;
+            }
+            for (int i = (int)start; i <= end; i++)
+            {
+                if (!CheckUnplayed(musicInfo, i))
+                {
+                    return false;
+                };
+            }
+            return true;
         }
         internal static bool CheckUnplayed(MusicInfo musicInfo, int diff)
         {
@@ -1422,10 +1518,13 @@ namespace SearchPlusPlus
                     var t = validScenes.Keys.Where(x => x.Contains(filter)).ToArray();
                     if (t.Length > 1)
                     {
-                        searchError = $"search error: scene filter search \"{t}\" is ambiguous between {string.Join(", ", t.Reverse().Skip(1).Reverse().Select(x => '"' + x + '"'))} and \"{t.Last()}\"";
-                        return null;
+                        if (t.Select(x => validScenes[x]).ToHashSet().Count > 1)
+                        {
+                            searchError = $"search error: scene filter search \"{t}\" is ambiguous between {string.Join(", ", t.Reverse().Skip(1).Reverse().Select(x => '"' + x + '"'))} and \"{t.Last()}\"";
+                            return null;
+                        }
                     }
-                    if (t.Length < 1)
+                    else if (t.Length < 1)
                     {
                         searchError = $"search error: scene filter \"{t}\" couldn't be found";
                         return null;
@@ -1469,9 +1568,9 @@ namespace SearchPlusPlus
             }
             return true;
         }
-        internal static bool? EvalHidden(MusicInfo musicInfo, string filter)
+        internal static bool? EvalHidden(MusicInfo musicInfo, string filter, byte type)
         {
-            return EvalDiff(musicInfo, filter, 1);
+            return EvalDiff(musicInfo, filter, type);
         }
         internal static bool? EvalDiff(MusicInfo musicInfo, string filter, byte type)
         {
@@ -1528,6 +1627,8 @@ namespace SearchPlusPlus
             return false;
 
         }
+
+        public static char[] splitChars = new char[] { '-' };
         internal static bool EvalRange(string expression, out double start, out double end)
         {
             start = double.NaN;
@@ -1536,6 +1637,12 @@ namespace SearchPlusPlus
             {
                 return false;
             }
+            bool negateStart = expression.StartsWith("-");
+            if (negateStart)
+            {
+                expression = expression.Substring(1);
+            }
+
             if (expression.EndsWith("+"))
             {
                 if (!double.TryParse(expression.TrimEnd('+'), out double x))
@@ -1544,6 +1651,10 @@ namespace SearchPlusPlus
                 }
                 start = x;
                 end = double.PositiveInfinity;
+                if (negateStart)
+                {
+                    start *= -1;
+                }
             }
             else if (expression.EndsWith("-"))
             {
@@ -1553,14 +1664,14 @@ namespace SearchPlusPlus
                 }
                 start = double.NegativeInfinity;
                 end = x;
+                if (negateStart)
+                {
+                    end *= -1;
+                }
             }
             else if (expression.Contains('-'))
             {
-                var splitTerm = expression.Split('-');
-                if (splitTerm.Length != 2)
-                {
-                    return false;
-                }
+                var splitTerm = expression.Split(splitChars, 2);
                 if (!double.TryParse(splitTerm[0], out start))
                 {
                     return false;
@@ -1568,6 +1679,10 @@ namespace SearchPlusPlus
                 if (!double.TryParse(splitTerm[1], out end))
                 {
                     return false;
+                }
+                if (negateStart)
+                {
+                    start *= -1;
                 }
             }
             else
