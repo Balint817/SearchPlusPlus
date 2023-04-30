@@ -970,20 +970,10 @@ namespace SearchPlusPlus
 
             if (key == "scene")
             {
-                string sceneFilter = null;
-                switch (value.Length)
+                if (value.Length == 0)
                 {
-                    case 0:
-                        errors = $"input error: special key \"{key}\" received empty value";
-                        return false;
-                    case 1:
-                        sceneFilter = '0' + value;
-                        break;
-                    case 2:
-                        sceneFilter = value;
-                        break;
-                    default:
-                        break;
+                    errors = $"input error: special key \"{key}\" received empty value";
+                    return false;
                 }
             }
             return true;
