@@ -61,18 +61,18 @@ All advanced searches made using this mod must be preceded by `search:`
 	- Also runs the same thing as `any`
 - `unplayed`
 	- No difficulty of a song has any clears
-- `unplayed:integer`
-	- Given difficulty of a song has no clears (1-5)
+- `unplayed:range`
+	- Given difficulties of a song have no clears (1-5)
 	- Supports `?` => selects highest difficulty
 - `fc`
 	- All difficulties of a song are FC-d (full combo)
-- `fc:integer`
-	- Given difficulty is FC-d (full combo)
+- `fc:range`
+	- Given difficulties are FC-d (full combo)
 	- Supports `?` => selects highest difficulty
 - `ap`
 	- All difficulties of a song are AP-d (all perfect)
-- `ap:integer`
-	- Given difficulty is AP-d (all perfect)
+- `ap:range`
+	- Given difficulties are AP-d (all perfect)
 	- Supports `?` => selects highest difficulty
 - `custom`
 	- The song is a custom song
