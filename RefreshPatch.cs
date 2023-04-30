@@ -92,7 +92,7 @@ namespace SearchPlusPlus
             try
             {
                 OptimizeSearchTags();
-                MelonLogger.Msg("Optimized tags: ß" + string.Join(" ", SearchPatch.tagGroups.Select(x1 => string.Join("|", x1.Select(x2 => PairToString(x2))))) + 'ß');
+                //MelonLogger.Msg("Optimized tags: ß" + string.Join(" ", SearchPatch.tagGroups.Select(x1 => string.Join("|", x1.Select(x2 => PairToString(x2))))) + 'ß');
             }
             catch (Exception)
             {
