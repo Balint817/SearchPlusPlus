@@ -1211,13 +1211,14 @@ namespace SearchPlusPlus
                         return null;
                     }
                     context = t[0][0].Value;
-                    value = splitValue[0];
                 }
+                value = splitValue[0];
             }
             else
             {
                 context = null;
             }
+
             if (!ModMain.customTags.ContainsKey(value))
             {
                 searchError = $"search error: unknown custom tag \"{value}\"";
