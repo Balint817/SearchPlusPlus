@@ -10,7 +10,7 @@
 
         public const string Company = "";
 
-        public const string Version = "3.2.3";
+        public const string Version = "3.3.0";
 
         public const string DownloadLink = "https://github.com/Balint817/SearchPlusPlus";
     }

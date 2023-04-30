@@ -284,8 +284,8 @@ namespace SearchPlusPlus
             ["34-3"] = new string[] { "P*Light", "TWINKLE★MAGIC ", "PEROPERO Chart Team \"Y*Howard\" PEROPERO Chart Team \"P*Hizer\" PEROPERO Chart Team \"P*Hizer\" PEROPERO Chart Team \"Y*Howard\"" },
             ["34-4"] = new string[] { "DJ Noriken & aran", "Comet Coaster ", "PEROPERO Chart Team \"Howard_Y\" PEROPERO Chart Team \"Howard_Y\" PEROPERO Chart Team \"Howard_Y\" #PRiNC3_OF_CHVRTZ" },
             ["34-5"] = new string[] { "DJ Myosuke & Gram", "XODUS ", "PEROPERO Chart Team \"Howard_Y\" PEROPERO Chart Team \"Howard_Y\" PEROPERO Chart Team \"Howard_Y\" catastropHY." },
-            ["35-0"] = new string[] { "立秋 feat.ちょこ","PeroPeroGames, the creator of MuseDash, went bankrupt~   MuseDashを作っているPeroPeroGamesさんが倒産しちゃったよ～","HXJはまだ給料もらってないよ〜" },
-            ["35-1"] = new string[] { "LeaF","MARENOL ","HOWARDY 1mg" },
+            ["35-0"] = new string[] { "立秋 feat.ちょこ", "PeroPeroGames, the creator of MuseDash, went bankrupt~   MuseDashを作っているPeroPeroGamesさんが倒産しちゃったよ～", "HXJはまだ給料もらってないよ〜" },
+            ["35-1"] = new string[] { "LeaF", "MARENOL ", "HOWARDY 1mg" },
             ["35-2"] = new string[] { "老爷", "My Japanese style is really good   僕の和風本当上手   僕の和风本当上手", "僕の古筝本当上手 僕の三弦本当上手 僕の唢呐本当上手" },
             ["35-3"] = new string[] { "iKz", "Rush B ", "money钱 (Silver I) money钱 (Silver II) money钱 (Silver more than II but less than IV)" },
             ["35-4"] = new string[] { "Cosmograph", "DataErr0r ", "Howard_Y Howard_Y Howard_Y [!!NODATA!!]" },
@@ -490,14 +490,15 @@ namespace SearchPlusPlus
             ["any"] = 2,
             ["anyx"] = 2,
             ["ranked"] = 0,
-            ["unplayed"] = -2,
-            ["fc"] = -2,
-            ["ap"] = -2,
+            ["unplayed"] = -1,
+            ["fc"] = -1,
+            ["ap"] = -1,
             ["def"] = 2,
             ["eval"] = 2,
             ["custom"] = 0,
+            ["clears"] = 1,
         };
-        
+
         internal static Dictionary<string, double> TagComplexity = new Dictionary<string, double>()
         {
             ["bpm"] = 1,
@@ -508,19 +509,20 @@ namespace SearchPlusPlus
             ["anyx"] = 5,
             ["unplayed"] = 10,
             ["fc"] = 15,
-            ["ap"] = 20
+            ["ap"] = 20,
+            ["clears"] = 20,
         };
 
         internal static Dictionary<string, string[]> allowedWildcards = new Dictionary<string, string[]>
         {
 
-            ["diff"] = new string[] {"?"},
-            ["bpm"] = new string[] {"?"},
-            ["hidden"] = new string[] {"?"},
-            ["touhou"] = new string[] {"?"},
-            ["unplayed"] = new string[] {"?"},
-            ["fc"] = new string[] {"?"},
-            ["ap"] = new string[] {"?"},
+            ["diff"] = new string[] { "?" },
+            ["bpm"] = new string[] { "?" },
+            ["hidden"] = new string[] { "?" },
+            ["touhou"] = new string[] { "?" },
+            ["unplayed"] = new string[] { "?" },
+            ["fc"] = new string[] { "?" },
+            ["ap"] = new string[] { "?" },
         };
 
         internal static string[] GetWildcards(string tag)
@@ -595,20 +597,48 @@ namespace SearchPlusPlus
             return false;
         }
 
-        internal static List<List<KeyValuePair<string, string>>> RuntimeParser(string input)
+        internal static List<List<KeyValuePair<string, string>>> RuntimeParser(string input, string context = null)
         {
-            const string parserText = "[Runtime parser] ";
+            if (searchError != null)
+            {
+                return null;
+            }
+            var t = SearchParser(input, out string error, context);
+            if (error != null)
+            {
+                searchError = error;
+                return null;
+            }
+            return t;
+        }
+
+        internal static KeyValuePair<string, string> HandleContext(KeyValuePair<string, string> input, string context)
+        {
+            if (input.Key == "eval" || input.Key == "def")
+            {
+                return input;
+            }
+            return new KeyValuePair<string, string>(input.Key, context);
+        }
+
+        internal static List<List<KeyValuePair<string, string>>> SearchParser(string input, out string error, string context = null)
+        {
+            error = null;
             input = input.ToLower().Trim(' ');
             if (input.Length == 0)
             {
-                searchError = parserText + "syntax error: advanced search was empty";
+                error = "syntax error: advanced search was empty";
                 return null;
             }
             var result = TryParseInputWithLogs(input, out var output);
             if (!result.Key)
             {
-                searchError = parserText + result.Value[0];
+                error = result.Value[0];
                 return null;
+            }
+            if (context != null)
+            {
+                output = output.Select(x => x.Select(y => HandleContext(y, context)).ToList()).ToList();
             }
             int groupIdx = 0;
             string errors;
@@ -618,7 +648,7 @@ namespace SearchPlusPlus
                 {
                     if (term.Key == "def" && !ModMain.RecursionEnabled)
                     {
-                        searchError = parserText + "input error: the \"def\" tag is not allowed in this context";
+                        error = "input error: the \"def\" tag is not allowed in this context";
                         return null;
                     }
                     if (!CheckFilter(term, out errors))
@@ -632,20 +662,20 @@ namespace SearchPlusPlus
             {
                 RefreshPatch.OptimizeSearchTags(output);
             }
-            catch (Exception) {}
+            catch (Exception) { }
             return output;
         breakLoop:
-            searchError = parserText + errors + $" (tag no. {groupIdx + 1})";
+            error = errors + $" (tag no. {groupIdx + 1})";
             return null;
         }
-        internal static bool? RunFilters(List<List<KeyValuePair<string, string>>> input, PeroString peroString, MusicInfo musicInfo)
+        internal static bool? RunFilters(List<List<KeyValuePair<string, string>>> input, PeroString peroString, MusicInfo musicInfo, string context = null)
         {
             foreach (var group in input)
             {
                 bool groupResult = false;
                 foreach (var term in group)
                 {
-                    var result = HandleFilter(peroString, musicInfo, term);
+                    var result = HandleFilter(peroString, musicInfo, term, context);
                     if (result == null)
                     {
                         return null;
@@ -697,7 +727,7 @@ namespace SearchPlusPlus
                         {
                             if (value == null)
                             {
-                                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a value before '|'" });
+                                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a value before '|'" });
                             }
                             tagGroups.Last().Add(new KeyValuePair<string, string>(key, value));
                             key = null;
@@ -707,7 +737,7 @@ namespace SearchPlusPlus
                         }
                         if (key == null)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a key before '|'" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a key before '|'" });
                         }
                         tagGroups.Last().Add(new KeyValuePair<string, string>(key, null));
                         key = null;
@@ -716,7 +746,7 @@ namespace SearchPlusPlus
                     case ' ':
                         if (tagEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a key after '|'" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a key after '|'" });
                         }
                         if (isString)
                         {
@@ -732,7 +762,7 @@ namespace SearchPlusPlus
                         {
                             if (value == null)
                             {
-                                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a value after ':'" });
+                                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a value after ':'" });
                             }
                             tagGroups.Last().Add(new KeyValuePair<string, string>(key, value));
                             tagGroups.Add(new List<KeyValuePair<string, string>>());
@@ -753,11 +783,11 @@ namespace SearchPlusPlus
                     case ':':
                         if (tagEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a key after '|'" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a key after '|'" });
                         }
                         if (stringEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
                         }
                         if (isString)
                         {
@@ -772,20 +802,20 @@ namespace SearchPlusPlus
                         {
                             if (key == null)
                             {
-                                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a key after '|' or ' ', got '{c}'" });
+                                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a key after '|' or ' ', got '{c}'" });
                             }
                             isValue = true;
                             break;
                         }
-                        return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after value, got '{c}'", $"did you mean to use a string?" });
+                        return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected '|' or ' ' after value, got '{c}'", $"did you mean to use a string?" });
                     case '\\':
                         if (tagEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a key after '|'" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a key after '|'" });
                         }
                         if (stringEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
                         }
                         if (isString)
                         {
@@ -803,15 +833,15 @@ namespace SearchPlusPlus
                             value += c;
                             break;
                         }
-                        return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, key cannot contain '{c}'" });
+                        return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, key cannot contain '{c}'" });
                     case '"':
                         if (tagEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected a key after '|'" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected a key after '|'" });
                         }
                         if (stringEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?" });
                         }
                         if (isString)
                         {
@@ -838,12 +868,12 @@ namespace SearchPlusPlus
                             isString = true;
                             break;
                         }
-                        return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, key cannot contain '{c}'" });
+                        return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, key cannot contain '{c}'" });
                     default:
                         tagEnd = false;
                         if (stringEnd)
                         {
-                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1}, expected '|' or ' ' after string terminator, got '{c}'", "did you forget to escape ('\\\"') a quotation mark?" });
+                            return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1}, expected '|' or ' ' after string terminator, got '{c}'", "did you forget to escape ('\\\"') a quotation mark?" });
                         }
                         if (isValue)
                         {
@@ -856,7 +886,7 @@ namespace SearchPlusPlus
             }
             if (isString)
             {
-                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx+1} (end of prompt), unterminated string", "did you forget to escape ('\\\"') a quotation mark?" });
+                return new KeyValuePair<bool, string[]>(false, new string[] { $"syntax error at position {idx + 1} (end of prompt), unterminated string", "did you forget to escape ('\\\"') a quotation mark?" });
             }
             if (stringEnd || key != null)
             {
@@ -906,7 +936,7 @@ namespace SearchPlusPlus
                         return false;
                     }
 
-                    
+
                     if (value != null && !int.TryParse(value, out _) && !GetWildcards(key).Contains(value))
                     {
                         errors = $"input error: failed to parse value \"{value}\" for integer-type key \"{key}\"";
@@ -978,7 +1008,7 @@ namespace SearchPlusPlus
             }
             return true;
         }
-        internal static bool? HandleFilter(PeroString peroString, MusicInfo musicInfo, KeyValuePair<string, string> filter)
+        internal static bool? HandleFilter(PeroString peroString, MusicInfo musicInfo, KeyValuePair<string, string> filter, string context = null)
         {
             string key = filter.Key;
             string value = filter.Value;
@@ -1082,38 +1112,117 @@ namespace SearchPlusPlus
                     }
                 case "eval":
                     {
-                        return EvalRuntime(peroString, musicInfo, value) ^ negate;
+                        return EvalRuntime(peroString, musicInfo, value, context) ^ negate;
                     }
                 case "custom":
                     {
                         return EvalCustom(musicInfo) ^ negate;
+                    }
+                case "clears":
+                    {
+                        return EvalClears(musicInfo, value) ^ negate;
                     }
 
             }
             searchError = $"search error: received unknown key \"{key}\"";
             return null;
         }
+        internal static bool? EvalClears(MusicInfo musicInfo, string value)
+        {
+            if (!EvalRange(value, out var start, out var end))
+            {
+                return null;
+            }
+            bool isCustom = EvalCustom(musicInfo);
+            HashSet<int> availableMaps;
+            if (isCustom)
+            {
+                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
+            }
+            else
+            {
+                availableMaps = new HashSet<int>();
+                for (int i = 1; i < 6; i++)
+                {
+                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
+                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
+                    {
+                        availableMaps.Add(i);
+                    }
+                }
+            }
+
+            string s = musicInfo.uid + "_";
+            long clearCount = 0;
+            foreach (var diff in availableMaps)
+            {
+                string t = s + diff;
+                var score = RefreshPatch.highScores.FirstOrDefault(x => (string)x["uid"] == t);
+                if (score == null)
+                {
+                    continue;
+                }
+                clearCount += (int)score["clear"];
+                if (clearCount > end)
+                {
+                    return false;
+                }
+            }
+            if (clearCount < start)
+            {
+                return false;
+            }
+            return true;
+        }
         internal static bool EvalCustom(MusicInfo musicInfo)
         {
             return AlbumManager.LoadedAlbumsByUid.ContainsKey(musicInfo.uid);
         }
-        internal static bool? EvalRuntime(PeroString peroString, MusicInfo musicInfo, string value)
+        internal static bool? EvalRuntime(PeroString peroString, MusicInfo musicInfo, string value, string context = null)
         {
-            var result = RuntimeParser(value);
+            var result = RuntimeParser(value, context);
             if (result == null)
             {
                 return null;
             }
-            return RunFilters(result, peroString, musicInfo);
+            return RunFilters(result, peroString, musicInfo, context);
         }
-        internal static bool? EvalDefine(PeroString ps, MusicInfo musicInfo, string value)
+
+        internal static char[] defSplitChars = new char[]{':'};
+        internal static bool? EvalDefine(PeroString ps, MusicInfo musicInfo, string value, string context = null)
         {
+            if (value.Contains(':'))
+            {
+                if (!ModMain.RecursionEnabled)
+                {
+                    searchError = "syntax error: using values for custom tags is not allowed.";
+                    return null;
+                }
+                var splitValue = value.Split(defSplitChars, 2);
+                var t = RuntimeParser($"def:\"{splitValue[1].Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
+                if (t == null)
+                {
+                    return null;
+                }
+                if (t.Count > 1)
+                {
+                    searchError = "input error: parsing context for 'def' failed, result contained more than 1 group";
+                    return null;
+                }
+                if (t[0].Count > 1)
+                {
+                    searchError = "input error: parsing context for 'def' failed, result group contained more than 1 value";
+                    return null;
+                }
+                context = t[0][0].Value;
+                value = splitValue[0];
+            }
             if (!ModMain.customTags.ContainsKey(value))
             {
                 searchError = $"search error: unknown custom tag \"{value}\"";
                 return null;
             }
-            return RunFilters(ModMain.customTags[value], ps, musicInfo);
+            return RunFilters(ModMain.customTags[value], ps, musicInfo, context);
         }
         internal static bool? EvalFC(MusicInfo musicInfo, string value)
         {
