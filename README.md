@@ -55,7 +55,7 @@ All advanced searches made using this mod must be preceded by `search:`
 - `tag:string`
 	- Search for a specific search tag (CustomAlbum's search tags)
 - `any:string`
-	- Short for `design:x|author:x|title:x|tag:x`
+	- Short for `design:x|author:x|title:x|tag:x` (See the `AND/OR operations` section)
 - `anyx:string`
 	- Uses custom search tags made by MNight4
 	- Also runs the same thing as `any`
