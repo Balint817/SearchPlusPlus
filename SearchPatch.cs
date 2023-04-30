@@ -614,11 +614,11 @@ namespace SearchPlusPlus
 
         internal static KeyValuePair<string, string> HandleContext(KeyValuePair<string, string> input, string context)
         {
-            if (input.Key == "eval" || input.Key == "def")
+            if (context == null || input.Key == "eval" || input.Key == "def")
             {
                 return input;
             }
-            return new KeyValuePair<string, string>(input.Key, context);
+            return new KeyValuePair<string, string>(input.Key, input.Value == null ? null : context);
         }
 
         internal static List<List<KeyValuePair<string, string>>> SearchParser(string input, out string error, string context = null)
@@ -921,10 +921,22 @@ namespace SearchPlusPlus
                 key = key.Substring(1);
             }
 
+            return true;
+        }
+        internal static bool? HandleFilter(PeroString peroString, MusicInfo musicInfo, KeyValuePair<string, string> filter, string context = null)
+        {
+            string key = filter.Key;
+            string value = HandleContext(filter, context).Value;
 
+            bool negate = false;
+            if (key[0] == '-')
+            {
+                negate = true;
+                key = key.Substring(1);
+            }
             if (!validFilters.ContainsKey(key))
             {
-                errors = $"input error: received unknown key \"{key}\"";
+                searchError = $"input error: received unknown key \"{key}\"";
                 return false;
             }
             switch (validFilters[key])
@@ -932,14 +944,14 @@ namespace SearchPlusPlus
                 case -3:
                     if (value == "")
                     {
-                        errors = $"input error: integer-type key \"{key}\" received empty value";
+                        searchError = $"input error: integer-type key \"{key}\" received empty value";
                         return false;
                     }
 
 
                     if (value != null && !int.TryParse(value, out _) && !GetWildcards(key).Contains(value))
                     {
-                        errors = $"input error: failed to parse value \"{value}\" for integer-type key \"{key}\"";
+                        searchError = $"input error: failed to parse value \"{value}\" for integer-type key \"{key}\"";
                         return false;
                     }
                     break;
@@ -948,50 +960,50 @@ namespace SearchPlusPlus
                 case -1:
                     if (value == "")
                     {
-                        errors = $"input error: range-type key \"{key}\" received empty value";
+                        searchError = $"input error: range-type key \"{key}\" received empty value";
                         return false;
                     }
                     if (value != null && !EvalRange(value, out _, out _) && !GetWildcards(key).Contains(value))
                     {
-                        errors = $"input error: failed to parse value \"{value}\" for range-type key \"{key}\"";
+                        searchError = $"input error: failed to parse value \"{value}\" for range-type key \"{key}\"";
                         return false;
                     }
                     break;
                 case 0:
                     if (value != null)
                     {
-                        errors = $"input error: range-type key \"{key}\" received empty value";
+                        searchError = $"input error: range-type key \"{key}\" received empty value";
                         return false;
                     }
                     break;
                 case 1:
                     if (string.IsNullOrEmpty(value))
                     {
-                        errors = $"input error: range-type key \"{key}\" received empty or null value";
+                        searchError = $"input error: range-type key \"{key}\" received empty or null value";
                         return false;
                     }
                     if (!EvalRange(value, out _, out _) && !GetWildcards(key).Contains(value))
                     {
-                        errors = $"input error: failed to parse value \"{value}\" for range-type key \"{key}\"";
+                        searchError = $"input error: failed to parse value \"{value}\" for range-type key \"{key}\"";
                         return false;
                     }
                     break;
                 case 2:
                     if (value == null)
                     {
-                        errors = $"input error: string-type key \"{key}\" received null value";
+                        searchError = $"input error: string-type key \"{key}\" received null value";
                         return false;
                     }
                     break;
                 case 3:
                     if (string.IsNullOrEmpty(value))
                     {
-                        errors = $"input error: integer-type key \"{key}\" received empty or null value";
+                        searchError = $"input error: integer-type key \"{key}\" received empty or null value";
                         return false;
                     }
                     if (!int.TryParse(value, out _) && !GetWildcards(key).Contains(value))
                     {
-                        errors = $"input error: failed to parse value \"{value}\" for integer-type key \"{key}\"";
+                        searchError = $"input error: failed to parse value \"{value}\" for integer-type key \"{key}\"";
                         return false;
                     }
                     break;
@@ -1002,23 +1014,10 @@ namespace SearchPlusPlus
             {
                 if (value.Length == 0)
                 {
-                    errors = $"input error: special key \"{key}\" received empty value";
+                    searchError = $"input error: special key \"{key}\" received empty value";
                     return false;
                 }
             }
-            return true;
-        }
-        internal static bool? HandleFilter(PeroString peroString, MusicInfo musicInfo, KeyValuePair<string, string> filter, string context = null)
-        {
-            string key = filter.Key;
-            string value = filter.Value;
-            bool negate = false;
-            if (key[0] == '-')
-            {
-                negate = true;
-                key = key.Substring(1);
-            }
-
 
             switch (key)
             {

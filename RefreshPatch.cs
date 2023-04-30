@@ -54,7 +54,7 @@ namespace SearchPlusPlus
             {
                 SearchPatch.isAdvancedSearch = null;
                 NullifyAdvancedSearch();
-                MelonLogger.Error("syntax error: advanced search was empty");
+                MelonLogger.Msg(ConsoleColor.Red, "syntax error: advanced search was empty");
                 return;
             }
             text = text.Substring(SearchPatch.startString.Length).Trim(' ');
@@ -63,7 +63,7 @@ namespace SearchPlusPlus
             if (!parseResult.Key)
             {
                 NullifyAdvancedSearch();
-                MelonLogger.Error(parseResult.Value[0]);
+                MelonLogger.Msg(ConsoleColor.Red, parseResult.Value[0]);
                 if (parseResult.Value.Length > 1)
                 {
                     MelonLogger.Msg(ConsoleColor.Magenta, parseResult.Value[1]);
@@ -96,13 +96,13 @@ namespace SearchPlusPlus
             }
             catch (Exception)
             {
-                MelonLogger.Warning("Failed to optimize tags (you shouldn't be able to see this)");
+                MelonLogger.Msg(ConsoleColor.Yellow, "Failed to optimize tags (you shouldn't be able to see this)");
             }
             return;
         breakLoop:
             SearchPatch.isAdvancedSearch = true;
             NullifyAdvancedSearch();
-            MelonLogger.Error(errors + $" (tag no. {groupIdx + 1})");
+            MelonLogger.Msg(ConsoleColor.Red, errors + $" (tag no. {groupIdx + 1})");
         }
 
         private static void OptimizeSearchTags()
@@ -366,6 +366,10 @@ namespace SearchPlusPlus
                 if (value.Contains(' ') || value.Contains('"') || value.Contains('|') || value.Contains(':'))
                 {
                     return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+                }
+                if (value == "")
+                {
+                    return "\"\"";
                 }
                 return value;
             }

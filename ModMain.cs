@@ -105,9 +105,9 @@ namespace SearchPlusPlus
             }
             catch (Exception ex)
             {
-                MelonLogger.Error(ex.ToString());
-                MelonLogger.Error(response);
-                MelonLogger.Warning("Failed to load search tags, using default tags");
+                MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
+                MelonLogger.Msg(ConsoleColor.Red, response);
+                MelonLogger.Msg(ConsoleColor.Yellow, "Failed to load search tags, using default tags");
             }
 
             try
@@ -119,8 +119,8 @@ namespace SearchPlusPlus
             catch (Exception ex)
             {
 
-                MelonLogger.Error(ex.ToString());
-                MelonLogger.Warning("If you're seeing this, then I have absolutely 0 clue how. Either way, the cinema tag won't work. (e.g. please report lmao)");
+                MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
+                MelonLogger.Msg(ConsoleColor.Yellow, "If you're seeing this, then I have absolutely 0 clue how. Either way, the cinema tag won't work. (e.g. please report lmao)");
             }
 
 
@@ -201,7 +201,7 @@ namespace SearchPlusPlus
                 continue;
             breakLoop:
                 MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                MelonLogger.Error(errors + $" (tag no. {groupIdx + 1})");
+                MelonLogger.Msg(ConsoleColor.Red, errors + $" (tag no. {groupIdx + 1})");
             }
             MelonLogger.Msg(Utils.Separator);
             MelonLogger.Msg($"Loaded {customTags.Count} custom tags");
@@ -215,7 +215,7 @@ namespace SearchPlusPlus
             }
             catch (Exception ex)
             {
-                MelonLogger.Error(ex.ToString());
+                MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
                 MelonLogger.Msg(ConsoleColor.DarkRed, "Failed to recover advanced search results. This is a critical error, the mod will NOT work.");
             }
 
@@ -370,8 +370,8 @@ namespace SearchPlusPlus
             }
             catch (Exception ex)
             {
-                MelonLogger.Error(ex.ToString());
-                MelonLogger.Warning("If you're seeing this, then I have absolutely 0 clue how. Either way, the headquarters tag won't work. (e.g. please report lmao)");
+                MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
+                MelonLogger.Msg(ConsoleColor.Yellow, "If you're seeing this, then I have absolutely 0 clue how. Either way, the headquarters tag won't work. (e.g. please report lmao)");
             }
         }
 
