@@ -1107,7 +1107,7 @@ namespace SearchPlusPlus
                     }
                 case "def":
                     {
-                        return EvalDefine(peroString, musicInfo, value) ^ negate;
+                        return EvalDefine(peroString, musicInfo, value, context) ^ negate;
                     }
                 case "eval":
                     {
