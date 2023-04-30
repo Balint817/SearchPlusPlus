@@ -120,6 +120,15 @@ All advanced searches made using this mod must be preceded by `search:`
     - This not only makes it impossible to evaluate, it will also freeze the game.
 - This behavior can be toggled off, but make sure that you know what you're doing.
 
+### **Cascaded custom tags**
+- `def:"mytag:value"`
+- The value after `:` will override values assigned to tags inside the custom tags.
+- Essentially allows you to give input to custom tags.
+- For the `eval` tag, the values inside it are overwritten instead.
+- For nested `def` (if enabled):
+	- If an empty value is given (`def:"mytag:"`), it'll inherit the value.
+	- Otherwise, the value remains unchanged.
+
 ### **Parsing info**
 - The characters `:`, `"`, `|` and spaces must be enclosed in a string to be searched.
 - The previous characters, along with `\`, cannot be part of a key, (such as a custom tag)

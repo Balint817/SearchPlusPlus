@@ -1193,23 +1193,30 @@ namespace SearchPlusPlus
             if (value.Contains(':'))
             {
                 var splitValue = value.Split(defSplitChars, 2);
-                var t = RuntimeParser($"def:\"{splitValue[1].Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
-                if (t == null)
+                if (splitValue[1] != "")
                 {
-                    return null;
+                    var t = RuntimeParser($"def:\"{splitValue[1].Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
+                    if (t == null)
+                    {
+                        return null;
+                    }
+                    if (t.Count > 1)
+                    {
+                        searchError = "input error: parsing context for 'def' failed, result contained more than 1 group";
+                        return null;
+                    }
+                    if (t[0].Count > 1)
+                    {
+                        searchError = "input error: parsing context for 'def' failed, result group contained more than 1 value";
+                        return null;
+                    }
+                    context = t[0][0].Value;
+                    value = splitValue[0];
                 }
-                if (t.Count > 1)
-                {
-                    searchError = "input error: parsing context for 'def' failed, result contained more than 1 group";
-                    return null;
-                }
-                if (t[0].Count > 1)
-                {
-                    searchError = "input error: parsing context for 'def' failed, result group contained more than 1 value";
-                    return null;
-                }
-                context = t[0][0].Value;
-                value = splitValue[0];
+            }
+            else
+            {
+                context = null;
             }
             if (!ModMain.customTags.ContainsKey(value))
             {
