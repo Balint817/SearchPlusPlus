@@ -4,7 +4,7 @@ An overly-complicated search engine mod for Muse Dash.
 
 ## Usage Guide
 
-**First things first, I recommend saving a bunch of filters you wrote beforehand, and copy-pasting them into the game as needed, cause typing these each time is annoying\
+**First things first, I recommend saving a bunch of filters you wrote beforehand, and copy-pasting them into the game as needed, cause typing these each time is annoying.\
 Alternatively, check out the `Custom tags` section.**
 
 All advanced searches made using this mod must be preceded by `search:`
