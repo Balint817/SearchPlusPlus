@@ -586,8 +586,6 @@ namespace SearchPlusPlus
             switch (RunFilters(tagGroups, peroString, musicInfo))
             {
                 case null:
-                    isAdvancedSearch = false;
-                    MelonLogger.Msg(ConsoleColor.Red, searchError);
                     return false;
                 case false:
                     return false;
@@ -1692,6 +1690,10 @@ namespace SearchPlusPlus
                 if (!double.TryParse(expression, out double x))
                 {
                     return false;
+                }
+                if (negateStart)
+                {
+                    x *= -1;
                 }
                 start = x;
                 end = x;
