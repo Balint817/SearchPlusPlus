@@ -983,13 +983,6 @@ namespace SearchPlusPlus
                         sceneFilter = value;
                         break;
                     default:
-                        var t = validScenes.Keys.Where(x => x.Contains(value)).ToArray();
-                        if (t.Length != 1)
-                        {
-                            errors = $"input error: special key \"{key}\" received an invalid value";
-                            return false;
-                        }
-                        sceneFilter = validScenes[t[0]];
                         break;
                 }
             }
