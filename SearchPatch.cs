@@ -1492,9 +1492,19 @@ namespace SearchPlusPlus
                     searchError = $"search error: received an empty string as 'scene'";
                     return null;
                 case 1:
+                    if (!char.IsDigit(filter[0]))
+                    {
+                        searchError = $"search error: expected digit as single character input for 'scene'";
+                        return null;
+                    }
                     sceneFilter = '0'+filter;
                     break;
                 case 2:
+                    if (filter.All(x => char.IsDigit(x)))
+                    {
+                        searchError = $"search error: expected digits as double character input for 'scene'";
+                        return null;
+                    }
                     sceneFilter = filter;
                     break;
                 default:
