@@ -467,13 +467,13 @@ namespace SearchPlusPlus
 
         // 0: must NOT have a value field
 
-        // 1: must have a value field of range type
-        // 2: must have a value field of string type
-        // 3: must have a value field of int type
+        // 1: range type
+        // 2: string type
+        // 3: double-range type
 
-        // -1: adaptive range type (may or may not have value)
-        // -2: adaptive string type (may or may not have value)
-        // -3: adaptive int type (may or may not have value)
+        // -1: adaptive range type
+        // -2: adaptive string type
+        // -3: adaptive double-range type
 
         internal static Dictionary<string, int> validFilters = new Dictionary<string, int>
         {
@@ -496,7 +496,7 @@ namespace SearchPlusPlus
             ["def"] = 2,
             ["eval"] = 2,
             ["custom"] = 0,
-            ["clears"] = 1,
+            //["clears"] = 3,
         };
 
         internal static Dictionary<string, double> TagComplexity = new Dictionary<string, double>()
@@ -510,7 +510,7 @@ namespace SearchPlusPlus
             ["unplayed"] = 10,
             ["fc"] = 15,
             ["ap"] = 20,
-            ["clears"] = 20,
+            //["clears"] = 20,
         };
 
         internal static Dictionary<string, string[]> allowedWildcards = new Dictionary<string, string[]>
@@ -523,6 +523,7 @@ namespace SearchPlusPlus
             ["unplayed"] = new string[] { "?" },
             ["fc"] = new string[] { "?" },
             ["ap"] = new string[] { "?" },
+            //["clears"] = new string[] { "?" },
         };
 
         internal static string[] GetWildcards(string tag)
@@ -937,74 +938,102 @@ namespace SearchPlusPlus
             if (!validFilters.ContainsKey(key))
             {
                 searchError = $"input error: received unknown key \"{key}\"";
-                return false;
+                return null;
             }
             switch (validFilters[key])
             {
                 case -3:
+                    value = value.Trim(' ');
                     if (value == "")
                     {
-                        searchError = $"input error: integer-type key \"{key}\" received empty value";
-                        return false;
+                        searchError = $"input error: double range-type key \"{key}\" received empty value";
+                        return null;
                     }
-
-
-                    if (value != null && !int.TryParse(value, out _) && !GetWildcards(key).Contains(value))
+                    if (value != null)
                     {
-                        searchError = $"input error: failed to parse value \"{value}\" for integer-type key \"{key}\"";
-                        return false;
+                        var splitValue = value.Split(' ');
+                        if (splitValue.Length > 2)
+                        {
+                            searchError = $"input error: expected at most 2, ranges for double range-type key \"{key}\", got {splitValue.Length}";
+                            return null;
+                        }
+                        for (int j = 0; j < splitValue.Length; j++)
+                        {
+                            if (!EvalRange(splitValue[j], out _, out _) && !GetWildcards(key).Contains(splitValue[j]))
+                            {
+
+                                searchError = $"input error: failed to parse value \"{splitValue[j]}\" for double range-type key \"{key}\"";
+                                return null;
+                            }
+                        }
                     }
                     break;
                 case -2:
                     break;
                 case -1:
+                    value = value.Trim(' ');
                     if (value == "")
                     {
                         searchError = $"input error: range-type key \"{key}\" received empty value";
-                        return false;
+                        return null;
                     }
                     if (value != null && !EvalRange(value, out _, out _) && !GetWildcards(key).Contains(value))
                     {
                         searchError = $"input error: failed to parse value \"{value}\" for range-type key \"{key}\"";
-                        return false;
+                        return null;
                     }
                     break;
                 case 0:
                     if (value != null)
                     {
                         searchError = $"input error: range-type key \"{key}\" received empty value";
-                        return false;
+                        return null;
                     }
                     break;
                 case 1:
+                    value = value.Trim(' ');
                     if (string.IsNullOrEmpty(value))
                     {
                         searchError = $"input error: range-type key \"{key}\" received empty or null value";
-                        return false;
+                        return null;
                     }
                     if (!EvalRange(value, out _, out _) && !GetWildcards(key).Contains(value))
                     {
                         searchError = $"input error: failed to parse value \"{value}\" for range-type key \"{key}\"";
-                        return false;
+                        return null;
                     }
                     break;
                 case 2:
                     if (value == null)
                     {
                         searchError = $"input error: string-type key \"{key}\" received null value";
-                        return false;
+                        return null;
                     }
                     break;
                 case 3:
-                    if (string.IsNullOrEmpty(value))
+                    value = value.Trim(' ');
+                    if (value == "")
                     {
-                        searchError = $"input error: integer-type key \"{key}\" received empty or null value";
-                        return false;
+                        searchError = $"input error: double range-type key \"{key}\" received empty value";
+                        return null;
                     }
-                    if (!int.TryParse(value, out _) && !GetWildcards(key).Contains(value))
+                    else
                     {
-                        searchError = $"input error: failed to parse value \"{value}\" for integer-type key \"{key}\"";
-                        return false;
+                        var splitValue = value.Split(' ');
+                        if (splitValue.Length > 2)
+                        {
+                            searchError = $"input error: expected at most 2, ranges for double range-type key \"{key}\", got {splitValue.Length}";
+                            return null;
+                        }
+                        for (int j = 0; j < splitValue.Length; j++)
+                        {
+                            if (!EvalRange(splitValue[j], out _, out _) && !GetWildcards(key).Contains(splitValue[j]))
+                            {
+
+                                searchError = $"input error: failed to parse value \"{splitValue[j]}\" for double range-type key \"{key}\"";
+                                return null;
+                            }
+                        }
                     }
                     break;
             }
@@ -1015,7 +1044,7 @@ namespace SearchPlusPlus
                 if (value.Length == 0)
                 {
                     searchError = $"input error: special key \"{key}\" received empty value";
-                    return false;
+                    return null;
                 }
             }
 
@@ -1117,10 +1146,10 @@ namespace SearchPlusPlus
                     {
                         return EvalCustom(musicInfo) ^ negate;
                     }
-                case "clears":
-                    {
-                        return EvalClears(musicInfo, value) ^ negate;
-                    }
+                //case "clears":
+                //    {
+                //        return EvalClears(musicInfo, value) ^ negate;
+                //    }
 
             }
             searchError = $"search error: received unknown key \"{key}\"";
@@ -1128,10 +1157,12 @@ namespace SearchPlusPlus
         }
         internal static bool? EvalClears(MusicInfo musicInfo, string value)
         {
-            if (!EvalRange(value, out var start, out var end))
+            if (string.IsNullOrEmpty(value))
             {
+                searchError = $"search error: received empty or null value";
                 return null;
             }
+
             bool isCustom = EvalCustom(musicInfo);
             HashSet<int> availableMaps;
             if (isCustom)
@@ -1150,6 +1181,70 @@ namespace SearchPlusPlus
                     }
                 }
             }
+            if (availableMaps.Count == 0)
+            {
+                return false;
+            }
+
+            var splitValue = value.Trim(' ').Split(' ');
+            double diffStart = 0;
+            double diffEnd = 0;
+            double clearStart = 0;
+            double clearEnd = 0;
+            if (splitValue.Length == 1)
+            {
+                if (!EvalRange(splitValue[0], out clearStart, out clearEnd))
+                {
+                    searchError = $"search error: failed to parse range \"{value}\"";
+                    if (splitValue[0] == "?")
+                    {
+                        searchError = $"search error: wildcard '?' is not allowed in this context";
+                    }
+                    return null;
+                }
+            }
+            else if (splitValue.Length == 2)
+            {
+                if (!EvalRange(splitValue[0], out diffStart, out diffEnd))
+                {
+                    if (splitValue[0] != "?")
+                    {
+                        searchError = $"search error: failed to parse range \"{value}\"";
+                        return null;
+                    }
+                    availableMaps = new HashSet<int>() { availableMaps.Max() };
+                }
+                else
+                {
+                    if (diffStart < 1)
+                    {
+                        searchError = $"search error: {diffStart} is not a valid range";
+                        return null;
+                    }
+                    if (diffEnd > 5)
+                    {
+                        searchError = $"search error: {diffEnd} is not a valid range";
+                        return null;
+                    }
+                    if (!EvalRange(splitValue[1], out clearStart, out clearEnd))
+                    {
+                        searchError = $"search error: failed to parse range \"{value}\"";
+                        if (splitValue[1] == "?")
+                        {
+                            searchError = $"search error: wildcard '?' is not allowed in this context";
+                        }
+                        return null;
+                    }
+                    availableMaps = availableMaps.Where(x => diffStart <= x && x <= diffEnd).ToHashSet();
+                }
+            }
+            else
+            {
+                searchError = $"search error: how the fuck?";
+                return null;
+            }
+
+            
 
             string s = musicInfo.uid + "_";
             long clearCount = 0;
@@ -1162,12 +1257,12 @@ namespace SearchPlusPlus
                     continue;
                 }
                 clearCount += (int)score["clear"];
-                if (clearCount > end)
+                if (clearCount > clearEnd)
                 {
                     return false;
                 }
             }
-            if (clearCount < start)
+            if (clearCount < clearStart)
             {
                 return false;
             }
@@ -1741,6 +1836,12 @@ namespace SearchPlusPlus
             {
                 return false;
             }
+            if (expression == "*")
+            {
+                start = double.NegativeInfinity;
+                end = double.PositiveInfinity;
+                return true;
+            }
             bool negateStart = expression.StartsWith("-");
             if (negateStart)
             {
@@ -1788,6 +1889,12 @@ namespace SearchPlusPlus
                 {
                     start *= -1;
                 }
+                if (start > end)
+                {
+                    var swap = end;
+                    end = start;
+                    start = swap;
+                }
             }
             else
             {
@@ -1801,12 +1908,6 @@ namespace SearchPlusPlus
                 }
                 start = x;
                 end = x;
-                if (start > end)
-                {
-                    var swap = end;
-                    end = start;
-                    start = end;
-                }
             }
             return true;
         }
