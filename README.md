@@ -129,6 +129,18 @@ All advanced searches made using this mod must be preceded by `search:`
 	- If an empty value is given (`def:"mytag:"`), it'll inherit the value.
 	- Otherwise, the value remains unchanged.
 
+### **Custom tag parameters**
+- `def:"mytag::\"value1\" \"value2\" ... \"valueX\""`
+- The value after the doubled `:` will override `prefix` and `add` tags inside the custom tag.
+- They will be overriden in the following order:
+	- `prefix` tags on their own are overriden first.
+		- These are required parameters. If less parameters are given, it results in an error.
+	- `prefix:""`, given an empty value will be overriden second, if there are remaining parameters.
+		- These are optional parameters. Empty `prefix` and `add` doesn't do anything on it's own after all.
+	- `prefix:"value"`, given a value will be overriden last, if there are remaining parameters.
+		- These are default parameters.
+- If there are more parameters than the total number of parameters (of all types), an error is thrown.
+
 ### **Parsing info**
 - The characters `:`, `"`, `|` and spaces must be enclosed in a string to be searched.
 - The previous characters, along with `\`, cannot be part of a key, (such as a custom tag)

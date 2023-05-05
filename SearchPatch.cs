@@ -1435,7 +1435,7 @@ namespace SearchPlusPlus
                 }
             }
             var result = new List<List<KeyValuePair<string, string>>>();
-            var paramIdxs = new Dictionary<bool, Dictionary<int, List<int>>>() { [false] = new Dictionary<int, List<int>>(), [true] = new Dictionary<int, List<int>>()};
+            var paramIdxs = new Dictionary<bool?, Dictionary<int, List<int>>>() { [false] = new Dictionary<int, List<int>>(), [true] = new Dictionary<int, List<int>>()};
 
             for (int i = 0; i < ModMain.customTags[key].Count; i++)
             {
@@ -1445,36 +1445,38 @@ namespace SearchPlusPlus
                     var term = group[j];
                     if (term.Key == "prefix" || term.Key == "add")
                     {
-                        bool flag = term.Value == null;
+                        bool? flag = (term.Value != "") ? (bool?)null : (term.Value == null);
                         if (!paramIdxs[flag].ContainsKey(i))
                         {
                             paramIdxs[flag][i] = new List<int>();
                         }
-                        paramIdxs[term.Value == null][i].Add(j);
+                        paramIdxs[flag][i].Add(j);
                     }
                 }
             }
             var requiredCount = paramIdxs[true].Select(x => x.Value.Count).Sum();
             var optionalCount = paramIdxs[false].Select(x => x.Value.Count).Sum();
+            var defaultCount = paramIdxs[null].Select(x => x.Value.Count).Sum();
             var argCount = args.Count;
             if (requiredCount > argCount)
             {
-                searchError = $"input error: expected {requiredCount} (+{optionalCount} optional) parameters, got {argCount}";
+                searchError = $"input error: expected {requiredCount} ({optionalCount} optional, {defaultCount} default) parameters, got {argCount}";
                 return null;
             }
 
             if (requiredCount < argCount)
             {
-                if ((requiredCount + optionalCount) < argCount)
+                if ((requiredCount + optionalCount + defaultCount) < argCount)
                 {
-                    searchError = $"input error: expected {requiredCount} (+{optionalCount} optional) parameters, got {argCount}";
+                    searchError = $"input error: expected {requiredCount} ({optionalCount} optional, {defaultCount} default) parameters, got {argCount}";
                     return null;
                 }
             }
 
 
-            var optionalIdx = requiredCount;
             var requiredIdx = 0;
+            var optionalIdx = requiredCount;
+            var defaultIdx = requiredCount + optionalCount;
 
             for (int i = 0; i < ModMain.customTags[key].Count; i++)
             {
@@ -1494,13 +1496,19 @@ namespace SearchPlusPlus
                         requiredIdx++;
                         continue;
                     }
-                    else if (optionalIdx >= argCount)
+                    if (paramIdxs[false].ContainsKey(i) && paramIdxs[false][i].Contains(j))
+                    {
+                        result[i].Add(new KeyValuePair<string, string>(term.Key, args[optionalIdx]));
+                        optionalIdx++;
+                        continue;
+                    }
+                    if (defaultIdx >= argCount)
                     {
                         continue;
                     }
 
-                    result[i].Add(new KeyValuePair<string, string>(term.Key, args[optionalIdx]));
-                    optionalIdx++;
+                    result[i].Add(new KeyValuePair<string, string>(term.Key, args[defaultIdx]));
+                    defaultIdx++;
 
                 }
             }
