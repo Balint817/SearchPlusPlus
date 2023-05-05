@@ -106,6 +106,19 @@ All advanced searches made using this mod must be preceded by `search:`
 - Keep in mind that unlike all other tags, this tag is parsed while searching, not before
     - e.g. the tag takes more time to run.
 
+### **Parsing info**
+- The characters `:`, `"`, `|` and spaces must be enclosed in a string to be searched.
+- The previous characters, along with `\`, cannot be part of a key, (such as a custom tag)
+- Keys cannot be strings.
+- Order of operations:
+    - Spaces bind the least tightly (executed last)
+    -`|` binds more tightly than spaces, less tightly than `:`
+    - `:` can only appear after a key, and `"` can only appear after `:`.
+    - `:` and strings (`""`) bind more tightly than `|`.
+    - Because strings have the highest binding force, the `eval` allows for further grouping of tags.
+        - This essentially results in the `eval` tag being similar to parentheses.
+        - Example: `eval:"tag1 tag2"|eval:"tag3 tag4"`
+
 ### **Custom tags**
 - `def:string`
 - Similar to `eval` in some places
@@ -140,18 +153,5 @@ All advanced searches made using this mod must be preceded by `search:`
 	- `prefix:"value"`, given a value will be overriden last, if there are remaining parameters.
 		- These are default parameters.
 - If there are more parameters than the total number of parameters (of all types), an error is thrown.
-
-### **Parsing info**
-- The characters `:`, `"`, `|` and spaces must be enclosed in a string to be searched.
-- The previous characters, along with `\`, cannot be part of a key, (such as a custom tag)
-- Keys cannot be strings.
-- Order of operations:
-    - Spaces bind the least tightly (executed last)
-    -`|` binds more tightly than spaces, less tightly than `:`
-    - `:` can only appear after a key, and `"` can only appear after `:`.
-    - `:` and strings (`""`) bind more tightly than `|`.
-    - Because strings have the highest binding force, the `eval` allows for further grouping of tags.
-        - This essentially results in the `eval` tag being similar to parentheses.
-        - Example: `eval:"tag1 tag2"|eval:"tag3 tag4"`
 
 # And that's all he wrote.
