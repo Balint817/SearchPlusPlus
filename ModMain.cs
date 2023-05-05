@@ -141,7 +141,7 @@ namespace SearchPlusPlus
             foreach (var item in customTagsEntry.Value)
             {
                 MelonLogger.Msg(Utils.Separator);
-
+                
                 foreach (var c in filterKey)
                 {
                     if (item.Key.Contains(c))
@@ -194,9 +194,9 @@ namespace SearchPlusPlus
                 }
                 catch (Exception)
                 {
-                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to optimize custom tag \"{item.Key}\" (you shouldn't be able to see this)");
+                    //MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to optimize custom tag \"{item.Key}\" (you shouldn't be able to see this)");
                 }
-                customTags[item.Key] = result;
+                customTags[item.Key.ToLower()] = result;
                 MelonLogger.Msg($"Parsed custom tag \"{item.Key}\": ß" + string.Join(" ", result.Select(x1 => string.Join("|", x1.Select(x2 => RefreshPatch.PairToString(x2))))) + 'ß');
                 continue;
             breakLoop:

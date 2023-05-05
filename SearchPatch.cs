@@ -11,6 +11,7 @@ using System.IO;
 using Assets.Scripts.PeroTools.Nice.Interface;
 using Il2CppMono;
 using Il2CppSystem.Security.Util;
+using Newtonsoft.Json.Linq;
 
 namespace SearchPlusPlus
 {
@@ -492,10 +493,11 @@ namespace SearchPlusPlus
             ["ranked"] = 0,
             ["unplayed"] = -1,
             ["fc"] = -1,
-            ["ap"] = -1,
+            ["acc"] = 3,
             ["def"] = 2,
             ["eval"] = 2,
             ["custom"] = 0,
+            ["add"] = 2,
             //["clears"] = 3,
         };
 
@@ -505,11 +507,12 @@ namespace SearchPlusPlus
             ["custom"] = 1,
             ["touhou"] = 1,
             ["scene"] = 1,
+            ["add"] = 1,
             ["any"] = 4,
             ["anyx"] = 5,
             ["unplayed"] = 10,
             ["fc"] = 15,
-            ["ap"] = 20,
+            ["acc"] = 20,
             //["clears"] = 20,
         };
 
@@ -522,7 +525,7 @@ namespace SearchPlusPlus
             ["touhou"] = new string[] { "?" },
             ["unplayed"] = new string[] { "?" },
             ["fc"] = new string[] { "?" },
-            ["ap"] = new string[] { "?" },
+            ["acc"] = new string[] { "?" },
             //["clears"] = new string[] { "?" },
         };
 
@@ -564,6 +567,7 @@ namespace SearchPlusPlus
         internal static string searchError = null;
         internal static bool Prefix(ref bool __result, PeroString peroString, MusicInfo musicInfo, string containsText)
         {
+            var s = "";
             if (searchError != null)
             {
                 return __result = false;
@@ -597,7 +601,7 @@ namespace SearchPlusPlus
             __result = true;
             return false;
         }
-
+        internal const string runtimeParserText = "[Runtime parser] ";
         internal static List<List<KeyValuePair<string, string>>> RuntimeParser(string input, string context = null)
         {
             if (searchError != null)
@@ -607,7 +611,7 @@ namespace SearchPlusPlus
             var t = SearchParser(input, out string error, context);
             if (error != null)
             {
-                searchError = error;
+                searchError = runtimeParserText + error;
                 return null;
             }
             return t;
@@ -669,14 +673,57 @@ namespace SearchPlusPlus
             error = errors + $" (tag no. {groupIdx + 1})";
             return null;
         }
+
+        internal static bool? InitConcat(KeyValuePair<string,string> term, KeyValuePair<string,string> current, out KeyValuePair<string, string> output)
+        {
+            output = current;
+            switch (term.Key)
+            {
+                case "add":
+                    output = new KeyValuePair<string, string>(current.Key, current.Value + term.Value);
+                    break;
+                case "prefix":
+                    output = new KeyValuePair<string, string>(term.Value + current.Key, current.Value);
+                    break;
+                default:
+                    return false;
+            }
+
+            if (term.Value == null)
+            {
+                searchError = $"search error: '{term.Key}' value was null";
+                return null;
+            }
+            return true;
+        }
+
+        internal static KeyValuePair<string, string> emptySPair = new KeyValuePair<string, string>();
         internal static bool? RunFilters(List<List<KeyValuePair<string, string>>> input, PeroString peroString, MusicInfo musicInfo, string context = null)
         {
+            var concat = emptySPair;
             foreach (var group in input)
             {
                 bool groupResult = false;
+                bool concatOnly = true;
                 foreach (var term in group)
                 {
-                    var result = HandleFilter(peroString, musicInfo, term, context);
+                    var concatResult = InitConcat(term, concat, out concat);
+                    KeyValuePair<string,string> concattedTerm;
+                    if (concatResult == null)
+                    {
+                        return null;
+                    }
+                    else if ((bool)concatResult)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        concatOnly = false;
+                        concattedTerm = (concat.Key != null || concat.Value != null || term.Value != null) ? new KeyValuePair<string, string>(term.Key, concat.Key + term.Value + concat.Value) : term;
+                        concat = emptySPair;
+                    }
+                    var result = HandleFilter(peroString, musicInfo, concattedTerm, context);
                     if (result == null)
                     {
                         return null;
@@ -687,6 +734,7 @@ namespace SearchPlusPlus
                         break;
                     }
                 }
+                groupResult |= concatOnly;
                 if (!groupResult)
                 {
                     return false;
@@ -943,7 +991,6 @@ namespace SearchPlusPlus
             switch (validFilters[key])
             {
                 case -3:
-                    value = value.Trim(' ');
                     if (value == "")
                     {
                         searchError = $"input error: double range-type key \"{key}\" received empty value";
@@ -951,10 +998,10 @@ namespace SearchPlusPlus
                     }
                     if (value != null)
                     {
-                        var splitValue = value.Split(' ');
+                        var splitValue = value.Split(' ').Where(x => x != "").ToArray();
                         if (splitValue.Length > 2)
                         {
-                            searchError = $"input error: expected at most 2, ranges for double range-type key \"{key}\", got {splitValue.Length}";
+                            searchError = $"input error: expected at most 2, ranges for double range-type key \"{key}\", got {splitValue.Length} ({value})";
                             return null;
                         }
                         for (int j = 0; j < splitValue.Length; j++)
@@ -971,7 +1018,6 @@ namespace SearchPlusPlus
                 case -2:
                     break;
                 case -1:
-                    value = value.Trim(' ');
                     if (value == "")
                     {
                         searchError = $"input error: range-type key \"{key}\" received empty value";
@@ -991,7 +1037,6 @@ namespace SearchPlusPlus
                     }
                     break;
                 case 1:
-                    value = value.Trim(' ');
                     if (string.IsNullOrEmpty(value))
                     {
                         searchError = $"input error: range-type key \"{key}\" received empty or null value";
@@ -1011,7 +1056,6 @@ namespace SearchPlusPlus
                     }
                     break;
                 case 3:
-                    value = value.Trim(' ');
                     if (value == "")
                     {
                         searchError = $"input error: double range-type key \"{key}\" received empty value";
@@ -1019,10 +1063,10 @@ namespace SearchPlusPlus
                     }
                     else
                     {
-                        var splitValue = value.Split(' ');
+                        var splitValue = value.Split(' ').Where(x => x != "").ToArray();
                         if (splitValue.Length > 2)
                         {
-                            searchError = $"input error: expected at most 2, ranges for double range-type key \"{key}\", got {splitValue.Length}";
+                            searchError = $"input error: expected at most 2, ranges for double range-type key \"{key}\", got {splitValue.Length} ({value})";
                             return null;
                         }
                         for (int j = 0; j < splitValue.Length; j++)
@@ -1126,13 +1170,13 @@ namespace SearchPlusPlus
                         }
                         return EvalFC(musicInfo, value) ^ negate;
                     }
-                case "ap":
+                case "acc":
                     {
                         if (value == null)
                         {
-                            return EvalAP(musicInfo) ^ negate;
+                            return EvalAcc(musicInfo) ^ negate;
                         }
-                        return EvalAP(musicInfo, value) ^ negate;
+                        return EvalAcc(musicInfo, value) ^ negate;
                     }
                 case "def":
                     {
@@ -1155,119 +1199,121 @@ namespace SearchPlusPlus
             searchError = $"search error: received unknown key \"{key}\"";
             return null;
         }
-        internal static bool? EvalClears(MusicInfo musicInfo, string value)
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                searchError = $"search error: received empty or null value";
-                return null;
-            }
 
-            bool isCustom = EvalCustom(musicInfo);
-            HashSet<int> availableMaps;
-            if (isCustom)
-            {
-                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
-            }
-            else
-            {
-                availableMaps = new HashSet<int>();
-                for (int i = 1; i < 6; i++)
-                {
-                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
-                    {
-                        availableMaps.Add(i);
-                    }
-                }
-            }
-            if (availableMaps.Count == 0)
-            {
-                return false;
-            }
+        //internal static bool? EvalClears(MusicInfo musicInfo, string value)
+        //{
+        //    if (string.IsNullOrEmpty(value))
+        //    {
+        //        searchError = $"search error: received empty or null value";
+        //        return null;
+        //    }
 
-            var splitValue = value.Trim(' ').Split(' ');
-            double diffStart = 0;
-            double diffEnd = 0;
-            double clearStart = 0;
-            double clearEnd = 0;
-            if (splitValue.Length == 1)
-            {
-                if (!EvalRange(splitValue[0], out clearStart, out clearEnd))
-                {
-                    searchError = $"search error: failed to parse range \"{value}\"";
-                    if (splitValue[0] == "?")
-                    {
-                        searchError = $"search error: wildcard '?' is not allowed in this context";
-                    }
-                    return null;
-                }
-            }
-            else if (splitValue.Length == 2)
-            {
-                if (!EvalRange(splitValue[0], out diffStart, out diffEnd))
-                {
-                    if (splitValue[0] != "?")
-                    {
-                        searchError = $"search error: failed to parse range \"{value}\"";
-                        return null;
-                    }
-                    availableMaps = new HashSet<int>() { availableMaps.Max() };
-                }
-                else
-                {
-                    if (diffStart < 1)
-                    {
-                        searchError = $"search error: {diffStart} is not a valid range";
-                        return null;
-                    }
-                    if (diffEnd > 5)
-                    {
-                        searchError = $"search error: {diffEnd} is not a valid range";
-                        return null;
-                    }
-                    if (!EvalRange(splitValue[1], out clearStart, out clearEnd))
-                    {
-                        searchError = $"search error: failed to parse range \"{value}\"";
-                        if (splitValue[1] == "?")
-                        {
-                            searchError = $"search error: wildcard '?' is not allowed in this context";
-                        }
-                        return null;
-                    }
-                    availableMaps = availableMaps.Where(x => diffStart <= x && x <= diffEnd).ToHashSet();
-                }
-            }
-            else
-            {
-                searchError = $"search error: how the fuck?";
-                return null;
-            }
+        //    bool isCustom = EvalCustom(musicInfo);
+        //    HashSet<int> availableMaps;
+        //    if (isCustom)
+        //    {
+        //        availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
+        //    }
+        //    else
+        //    {
+        //        availableMaps = new HashSet<int>();
+        //        for (int i = 1; i < 6; i++)
+        //        {
+        //            var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
+        //            if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
+        //            {
+        //                availableMaps.Add(i);
+        //            }
+        //        }
+        //    }
+        //    if (availableMaps.Count == 0)
+        //    {
+        //        return false;
+        //    }
 
-            
+        //    var splitValue = value.Trim(' ').Split(' ').Where(x => x != "").ToArray();
+        //    double diffStart = 0;
+        //    double diffEnd = 0;
+        //    double clearStart = 0;
+        //    double clearEnd = 0;
+        //    if (splitValue.Length == 1)
+        //    {
+        //        if (!EvalRange(splitValue[0], out clearStart, out clearEnd))
+        //        {
+        //            searchError = $"search error: failed to parse range \"{value}\"";
+        //            if (splitValue[0] == "?")
+        //            {
+        //                searchError = $"search error: wildcard '?' is not allowed in this context";
+        //            }
+        //            return null;
+        //        }
+        //    }
+        //    else if (splitValue.Length == 2)
+        //    {
+        //        if (!EvalRange(splitValue[0], out diffStart, out diffEnd))
+        //        {
+        //            if (splitValue[0] != "?")
+        //            {
+        //                searchError = $"search error: failed to parse range \"{value}\"";
+        //                return null;
+        //            }
+        //            availableMaps = new HashSet<int>() { availableMaps.Max() };
+        //        }
+        //        else
+        //        {
+        //            if (diffStart < 1)
+        //            {
+        //                searchError = $"search error: {diffStart} is not a valid range";
+        //                return null;
+        //            }
+        //            if (diffEnd > 5)
+        //            {
+        //                searchError = $"search error: {diffEnd} is not a valid range";
+        //                return null;
+        //            }
+        //            if (!EvalRange(splitValue[1], out clearStart, out clearEnd))
+        //            {
+        //                searchError = $"search error: failed to parse range \"{value}\"";
+        //                if (splitValue[1] == "?")
+        //                {
+        //                    searchError = $"search error: wildcard '?' is not allowed in this context";
+        //                }
+        //                return null;
+        //            }
+        //            availableMaps = availableMaps.Where(x => diffStart <= x && x <= diffEnd).ToHashSet();
+        //        }
+        //    }
+        //    else
+        //    {
+        //        searchError = $"search error: how the fuck?";
+        //        return null;
+        //    }
 
-            string s = musicInfo.uid + "_";
-            long clearCount = 0;
-            foreach (var diff in availableMaps)
-            {
-                string t = s + diff;
-                var score = RefreshPatch.highScores.FirstOrDefault(x => (string)x["uid"] == t);
-                if (score == null)
-                {
-                    continue;
-                }
-                clearCount += (int)score["clear"];
-                if (clearCount > clearEnd)
-                {
-                    return false;
-                }
-            }
-            if (clearCount < clearStart)
-            {
-                return false;
-            }
-            return true;
-        }
+
+
+        //    string s = musicInfo.uid + "_";
+        //    long clearCount = 0;
+        //    foreach (var diff in availableMaps)
+        //    {
+        //        string t = s + diff;
+        //        var score = RefreshPatch.highScores.FirstOrDefault(x => (string)x["uid"] == t);
+        //        if (score == null)
+        //        {
+        //            continue;
+        //        }
+        //        clearCount += (int)score["clear"];
+        //        if (clearCount > clearEnd)
+        //        {
+        //            return false;
+        //        }
+        //    }
+        //    if (clearCount < clearStart)
+        //    {
+        //        return false;
+        //    }
+        //    return true;
+        //}
+
         internal static bool EvalCustom(MusicInfo musicInfo)
         {
             return AlbumManager.LoadedAlbumsByUid.ContainsKey(musicInfo.uid);
@@ -1290,6 +1336,10 @@ namespace SearchPlusPlus
                 var splitValue = value.Split(defSplitChars, 2);
                 if (splitValue[1] != "")
                 {
+                    if (splitValue[1].StartsWith(":\""))
+                    {
+                        return EvalParams(ps, musicInfo, splitValue[0], splitValue[1].Substring(2), context);
+                    }
                     var t = RuntimeParser($"def:\"{splitValue[1].Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
                     if (t == null)
                     {
@@ -1321,57 +1371,169 @@ namespace SearchPlusPlus
             }
             return RunFilters(ModMain.customTags[value], ps, musicInfo, context);
         }
-        internal static bool? EvalFC(MusicInfo musicInfo, string value)
+
+        private static bool? EvalParams(PeroString ps, MusicInfo musicInfo, string key, string value, string context)
         {
-            if (value == "?")
+            if (!ModMain.customTags.ContainsKey(key))
             {
-                bool isCustom = EvalCustom(musicInfo);
-                int i = 5;
-                for (; i > 0; i--)
+                searchError = $"search error: unknown custom tag \"{key}\"";
+                return null;
+            }
+            bool isString = true;
+            bool isEscape = false;
+            string arg = null;
+            var args = new List<string>();
+            foreach (var c in value)
+            {
+                switch (c)
                 {
-                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
-                    {
+                    case ' ':
+                        isEscape = false;
+                        if (isString)
+                        {
+                            arg += c;
+                        }
                         break;
+                    case '"':
+                        if (isString)
+                        {
+                            if (isEscape)
+                            {
+                                arg += c;
+                                isEscape = false;
+                                break;
+                            }
+                            isString = false;
+                            args.Add(arg ?? "");
+                            arg = null;
+                            break;
+                        }
+                        isString = true;
+                        break;
+                    case '\\':
+                        if (!isString)
+                        {
+                            searchError = runtimeParserText + $"syntax error: expected space or new string after parameter, got \"{c}\"";
+                            return null;
+                        }
+                        if (isEscape)
+                        {
+                            arg += c;
+                            break;
+                        }
+                        isEscape = true;
+                        break;
+                    default:
+                        if (!isString)
+                        {
+                            searchError = runtimeParserText + $"syntax error: expected space or new string after parameter, got \"{c}\"";
+                            return null;
+                        }
+                        isEscape = false;
+                        arg += c;
+                        break;
+                }
+            }
+            var result = new List<List<KeyValuePair<string, string>>>();
+            var paramIdxs = new Dictionary<bool, Dictionary<int, List<int>>>() { [false] = new Dictionary<int, List<int>>(), [true] = new Dictionary<int, List<int>>()};
+
+            for (int i = 0; i < ModMain.customTags[key].Count; i++)
+            {
+                var group = ModMain.customTags[key][i];
+                for (int j = 0; j < group.Count; j++)
+                {
+                    var term = group[j];
+                    if (term.Key == "prefix" || term.Key == "add")
+                    {
+                        bool flag = term.Value == null;
+                        if (!paramIdxs[flag].ContainsKey(i))
+                        {
+                            paramIdxs[flag][i] = new List<int>();
+                        }
+                        paramIdxs[term.Value == null][i].Add(j);
                     }
                 }
-                if (i == 0)
-                {
-                    return false;
-                }
-                return EvalFC(musicInfo, i.ToString());
             }
-            if (!EvalRange(value, out var start, out var end))
+            var requiredCount = paramIdxs[true].Select(x => x.Value.Count).Sum();
+            var optionalCount = paramIdxs[false].Select(x => x.Value.Count).Sum();
+            var argCount = args.Count;
+            if (requiredCount > argCount)
             {
+                searchError = $"input error: expected {requiredCount} (+{optionalCount} optional) parameters, got {argCount}";
                 return null;
             }
-            if (double.IsNegativeInfinity(start))
+
+            if (requiredCount < argCount)
             {
-                start = 1;
-                if (end < 1)
+                if ((requiredCount + optionalCount) < argCount)
                 {
-                    searchError = $"search error: '{end}' is not a valid difficulty";
+                    searchError = $"input error: expected {requiredCount} (+{optionalCount} optional) parameters, got {argCount}";
                     return null;
                 }
             }
-            if (double.IsPositiveInfinity(end))
+
+
+            var optionalIdx = requiredCount;
+            var requiredIdx = 0;
+
+            for (int i = 0; i < ModMain.customTags[key].Count; i++)
             {
-                end = 5;
-                if (start > 5)
+                var group = ModMain.customTags[key][i];
+                result.Add(new List<KeyValuePair<string, string>>());
+                for (int j = 0; j < group.Count; j++)
                 {
-                    searchError = $"search error: '{start}' is not a valid difficulty";
+                    var term = group[j];
+                    if (!(term.Key == "prefix" || term.Key == "add"))
+                    {
+                        result[i].Add(term);
+                        continue;
+                    }
+                    if (paramIdxs[true].ContainsKey(i) && paramIdxs[true][i].Contains(j))
+                    {
+                        result[i].Add(new KeyValuePair<string, string>(term.Key, args[requiredIdx]));
+                        requiredIdx++;
+                        continue;
+                    }
+                    else if (optionalIdx >= argCount)
+                    {
+                        continue;
+                    }
+
+                    result[i].Add(new KeyValuePair<string, string>(term.Key, args[optionalIdx]));
+                    optionalIdx++;
+
+                }
+            }
+
+            return RunFilters(result, ps, musicInfo, context);
+
+        }
+
+        internal static bool? EvalFC(MusicInfo musicInfo, string value)
+        {
+            if (!GetAvailableMaps(musicInfo, out var availableMaps, out var isCustom))
+            {
+                return false;
+            }
+            value = value.Trim(' ');
+            var result = EvalRange(value, out var start, out var end, 1, 5);
+            if (result == null)
+            {
+                if (value != "?")
+                {
+                    searchError = $"search error: failed to parse range \"{value}\"";
                     return null;
                 }
             }
-            if (start < 1)
+            if (result == false)
             {
-                searchError = $"search error: '{start}' is not a valid difficulty";
+                searchError = $"search error: \"{value}\" isn't within the acceptable range of values";
                 return null;
             }
-            if (end > 5)
+            availableMaps = availableMaps.Where(x => start <= x && x <= end).ToHashSet();
+            if (availableMaps.Count == 0)
             {
-                searchError = $"search error: '{end}' is not a valid difficulty";
-                return null;
+                return false;
             }
             for (int i = (int)start; i <= end; i++)
             {
@@ -1383,62 +1545,88 @@ namespace SearchPlusPlus
             }
             return true;
         }
-        internal static bool? EvalAP(MusicInfo musicInfo, string value)
+        internal static bool? EvalAcc(MusicInfo musicInfo, string value)
         {
-            if (value == "?")
+            if (!GetAvailableMaps(musicInfo, out var availableMaps))
             {
-                bool isCustom = EvalCustom(musicInfo);
-                int i = 5;
-                for (; i > 0; i--)
+                return false;
+            }
+            var splitValue = value.Trim(' ').Split(' ').Where(x => x != "").ToArray();
+            double diffStart = 1;
+            double diffEnd = 5;
+            double accStart = 0;
+            double accEnd = 1;
+            if (splitValue.Length == 1)
+            {
+                value = splitValue[0];
+                var result = EvalRange(value, out accStart, out accEnd, 0, 100);
+                if (result == null)
                 {
-                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
+                    searchError = $"search error: failed to parse range \"{value}\"";
+                    return null;
+                }
+                if (result == false)
+                {
+                    searchError = $"search error: \"{value}\" isn't within the acceptable range of values";
+                    return null;
+                }
+                accStart /= 100;
+                accEnd /= 100;
+            }
+            else if (splitValue.Length == 2)
+            {
+                var result = EvalRange(splitValue[0], out accStart, out accEnd, 0, 100);
+                if (result == null)
+                {
+                    searchError = $"search error: failed to parse range \"{value}\"";
+                    if (splitValue[1] == "?")
                     {
-                        break;
+                        searchError = $"search error: wildcard '?' is not allowed in this context";
                     }
-                }
-                if (i == 0)
-                {
-                    return false;
-                }
-                return EvalAP(musicInfo, i.ToString());
-            }
-            if (!EvalRange(value, out var start, out var end))
-            {
-                return null;
-            }
-            if (double.IsNegativeInfinity(start))
-            {
-                start = 1;
-                if (end < 1)
-                {
-                    searchError = $"search error: '{end}' is not a valid difficulty";
                     return null;
                 }
-            }
-            if (double.IsPositiveInfinity(end))
-            {
-                end = 5;
-                if (start > 5)
+                if (result == false)
                 {
-                    searchError = $"search error: '{start}' is not a valid difficulty";
+                    searchError = $"search error: \"{splitValue[0]}\" isn't within the acceptable range of values";
                     return null;
                 }
+                accStart /= 100;
+                accEnd /= 100;
+                result = EvalRange(splitValue[1], out diffStart, out diffEnd, 1, 5);
+                if (result == null)
+                {
+                    if (splitValue[1] != "?")
+                    {
+                        searchError = $"search error: failed to parse range \"{splitValue[1]}\"";
+                        return null;
+                    }
+                    availableMaps = new HashSet<int>() { availableMaps.Max() };
+                }
+                else if (result == false)
+                {
+                    searchError = $"search error: \"{splitValue[1]}\" isn't within the acceptable range of values";
+                    return null;
+                }
+                else
+                {
+                    availableMaps = availableMaps.Where(x => diffStart <= x && x <= diffEnd).ToHashSet();
+                }
             }
-            if (start < 1)
+            else
             {
-                searchError = $"search error: '{start}' is not a valid difficulty";
+                searchError = $"search error: how the fuck? (evalAcc, ß{value}ß)";
                 return null;
             }
-            if (end > 5)
+
+            if (availableMaps.Count == 0)
             {
-                searchError = $"search error: '{end}' is not a valid difficulty";
-                return null;
+                return false;
             }
-            for (int i = (int)start; i <= end; i++)
+
+            foreach (var diff in availableMaps)
             {
-                string s = musicInfo.uid + "_" + i;
-                if (!RefreshPatch.highScores.Any(x => (string)x["uid"] == s && (float)x["accuracy"] == 1))
+                string s = musicInfo.uid + "_" + diff;
+                if (!RefreshPatch.highScores.Any(x => (string)x["uid"] == s && accStart <= (float)x["accuracy"] && (float)x["accuracy"] <= accEnd))
                 {
                     return false;
                 };
@@ -1447,23 +1635,9 @@ namespace SearchPlusPlus
         }
         internal static bool EvalFC(MusicInfo musicInfo)
         {
-            bool isCustom = EvalCustom(musicInfo);
-            HashSet<int> availableMaps;
-            if (isCustom)
+            if (!GetAvailableMaps(musicInfo, out var availableMaps))
             {
-                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
-            }
-            else
-            {
-                availableMaps = new HashSet<int>();
-                for (int i = 1; i < 6; i++)
-                {
-                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
-                    {
-                        availableMaps.Add(i);
-                    }
-                }
+                return false;
             }
 
             string s = musicInfo.uid + "_";
@@ -1477,25 +1651,11 @@ namespace SearchPlusPlus
             }
             return true;
         }
-        internal static bool EvalAP(MusicInfo musicInfo)
+        internal static bool EvalAcc(MusicInfo musicInfo)
         {
-            bool isCustom = EvalCustom(musicInfo);
-            HashSet<int> availableMaps;
-            if (isCustom)
+            if (!GetAvailableMaps(musicInfo, out var availableMaps))
             {
-                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
-            }
-            else
-            {
-                availableMaps = new HashSet<int>();
-                for (int i = 1; i < 6; i++)
-                {
-                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
-                    {
-                        availableMaps.Add(i);
-                    }
-                }
+                return false;
             }
 
             string s = musicInfo.uid + "_";
@@ -1517,55 +1677,26 @@ namespace SearchPlusPlus
         }
         internal static bool? EvalUnplayed(MusicInfo musicInfo, string value)
         {
-            if (value == "?")
+            if (!GetAvailableMaps(musicInfo, out var availableMaps))
             {
-                bool isCustom = EvalCustom(musicInfo);
-                int i = 5;
-                for (; i > 0; i--)
-                {
-                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
-                    {
-                        break;
-                    }
-                }
-                if (i == 0)
-                {
-                    return false;
-                }
-                return CheckUnplayed(musicInfo, i);
+                return false;
             }
-            if (!EvalRange(value, out var start, out var end))
+            value = value.Trim(' ');
+            var result = EvalRange(value, out var start, out var end, 1, 5);
+            if (result == null)
             {
+                searchError = $"search error: failed to parse range \"{value}\"";
                 return null;
             }
-            if (double.IsNegativeInfinity(start))
+            if (result == false)
             {
-                start = 1;
-                if (end < 1)
-                {
-                    searchError = $"search error: '{end}' is not a valid difficulty";
-                    return null;
-                }
-            }
-            if (double.IsPositiveInfinity(end))
-            {
-                end = 5;
-                if (start > 5)
-                {
-                    searchError = $"search error: '{start}' is not a valid difficulty";
-                    return null;
-                }
-            }
-            if (start < 1)
-            {
-                searchError = $"search error: '{start}' is not a valid difficulty";
+                searchError = $"search error: \"{value}\" isn't within the acceptable range of values";
                 return null;
             }
-            if (end > 5)
+            availableMaps = availableMaps.Where(x => start <= x && x <= end).ToHashSet();
+            if (availableMaps.Count == 0)
             {
-                searchError = $"search error: '{end}' is not a valid difficulty";
-                return null;
+                return false;
             }
             for (int i = (int)start; i <= end; i++)
             {
@@ -1691,6 +1822,7 @@ namespace SearchPlusPlus
         }
         internal static bool? EvalScene(MusicInfo musicInfo, string filter)
         {
+            filter = filter.Trim(' ');
             string sceneFilter = null;
             switch (filter.Length)
             {
@@ -1739,6 +1871,7 @@ namespace SearchPlusPlus
         }
         internal static bool? EvalBPM(MusicInfo musicInfo, string filter)
         {
+            filter = filter.Trim(' ');
             if (!double.TryParse(musicInfo.bpm.Replace(",", "."), out double x))
             {
                 return filter == "?";
@@ -1783,6 +1916,7 @@ namespace SearchPlusPlus
                 new int[]{4},
                 new int[]{5}
             };
+            filter = filter.Trim(' ');
             if (filter == "?")
             {
                 diffIncludeString = true;
@@ -1836,6 +1970,7 @@ namespace SearchPlusPlus
             {
                 return false;
             }
+            expression = expression.Trim(' ');
             if (expression == "*")
             {
                 start = double.NegativeInfinity;
@@ -1908,6 +2043,136 @@ namespace SearchPlusPlus
                 }
                 start = x;
                 end = x;
+            }
+            return true;
+        }
+        internal static bool? EvalRange(string expression, out double start, out double end, double min, double max)
+        {
+            start = double.NaN;
+            end = double.NaN;
+            if (string.IsNullOrEmpty(expression))
+            {
+                return null;
+            }
+            if (min > max)
+            {
+                var swap = min;
+                min = max;
+                max = swap;
+            }
+            expression = expression.Trim(' ');
+            if (expression == "*")
+            {
+                start = min;
+                end = max;
+                return true;
+            }
+            bool negateStart = expression.StartsWith("-");
+            if (negateStart)
+            {
+                expression = expression.Substring(1);
+            }
+
+            if (expression.EndsWith("+"))
+            {
+                if (!double.TryParse(expression.TrimEnd('+'), out double x))
+                {
+                    return null;
+                }
+                start = x;
+                end = max;
+                if (negateStart)
+                {
+                    start *= -1;
+                }
+            }
+            else if (expression.EndsWith("-"))
+            {
+                if (!double.TryParse(expression.TrimEnd('-'), out double x))
+                {
+                    return null;
+                }
+                start = min;
+                end = x;
+                if (negateStart)
+                {
+                    end *= -1;
+                }
+            }
+            else if (expression.Contains('-'))
+            {
+                var splitTerm = expression.Split(splitChars, 2);
+                if (!double.TryParse(splitTerm[0], out start))
+                {
+                    return null;
+                }
+                if (!double.TryParse(splitTerm[1], out end))
+                {
+                    return null;
+                }
+                if (negateStart)
+                {
+                    start *= -1;
+                }
+            }
+            else
+            {
+                if (!double.TryParse(expression, out double x))
+                {
+                    return null;
+                }
+                if (negateStart)
+                {
+                    x *= -1;
+                }
+                start = x;
+                end = x;
+            }
+            if (start > end)
+            {
+                var swap = end;
+                end = start;
+                start = swap;
+            }
+
+            if (end < min || max < end)
+            {
+                return false;
+            }
+            if (start < min || max < start)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        internal static bool GetAvailableMaps(MusicInfo musicInfo, out HashSet<int> availableMaps)
+        {
+            return GetAvailableMaps(musicInfo, out availableMaps, out _);
+        }
+
+        internal static bool GetAvailableMaps(MusicInfo musicInfo, out HashSet<int> availableMaps, out bool isCustom)
+        {
+            isCustom = EvalCustom(musicInfo);
+            if (isCustom)
+            {
+                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
+            }
+            else
+            {
+                availableMaps = new HashSet<int>();
+                for (int i = 1; i < 6; i++)
+                {
+                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
+                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0" || (isCustom && !AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.ContainsKey(i))))
+                    {
+                        availableMaps.Add(i);
+                    }
+                }
+            }
+            if (availableMaps.Count == 0)
+            {
+                return false;
             }
             return true;
         }

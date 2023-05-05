@@ -96,7 +96,7 @@ namespace SearchPlusPlus
             }
             catch (Exception)
             {
-                MelonLogger.Msg(ConsoleColor.Yellow, "Failed to optimize tags (you shouldn't be able to see this)");
+                //MelonLogger.Msg(ConsoleColor.Yellow, "Failed to optimize tags (you shouldn't be able to see this)");
             }
             return;
         breakLoop:
@@ -348,6 +348,10 @@ namespace SearchPlusPlus
         {
             try
             {
+                if (value == "")
+                {
+                    return "\"\"";
+                }
                 switch (Math.Abs(SearchPatch.validFilters[key.StartsWith("-") ? key.Substring(1) : key]))
                 {
                     case 1:
@@ -366,10 +370,6 @@ namespace SearchPlusPlus
                 if (value.Contains(' ') || value.Contains('"') || value.Contains('|') || value.Contains(':'))
                 {
                     return $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
-                }
-                if (value == "")
-                {
-                    return "\"\"";
                 }
                 return value;
             }
