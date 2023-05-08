@@ -12,6 +12,8 @@ using Assets.Scripts.PeroTools.Nice.Interface;
 using Il2CppMono;
 using Il2CppSystem.Security.Util;
 using Newtonsoft.Json.Linq;
+using Assets.Scripts.PeroTools.Commons;
+using Assets.Scripts.PeroTools.Managers;
 
 namespace SearchPlusPlus
 {
@@ -1753,16 +1755,17 @@ namespace SearchPlusPlus
         }
         internal static bool EvalTag(PeroString pStr, MusicInfo musicInfo, string filter)
         {
-            if (EvalCustom(musicInfo))
+            var uidToInfo = Singleton<ConfigManager>.instance.GetConfigObject<DBConfigMusicSearchTag>(0).m_Dictionary;
+            if (uidToInfo.ContainsKey(musicInfo.uid))
             {
-                var tags = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].Info.searchTags;
+                var tags = uidToInfo[musicInfo.uid]?.tag;
                 if (tags != null)
                 {
                     foreach (var tag in tags)
                     {
                         if (pStr.LowerContains(tag ?? "", filter))
                         {
-                            return false;
+                            return true;
                         }
                     }
                 }
