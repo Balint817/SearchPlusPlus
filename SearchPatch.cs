@@ -1058,9 +1058,9 @@ namespace SearchPlusPlus
                     }
                     break;
                 case 3:
-                    if (value == "")
+                    if (string.IsNullOrEmpty(value))
                     {
-                        searchError = $"input error: double range-type key \"{key}\" received empty value";
+                        searchError = $"input error: double range-type key \"{key}\" received empty or null value";
                         return null;
                     }
                     else
@@ -1589,7 +1589,7 @@ namespace SearchPlusPlus
                 if (result == null)
                 {
                     searchError = $"search error: failed to parse range \"{value}\"";
-                    if (splitValue[1] == "?")
+                    if (splitValue[0] == "?")
                     {
                         searchError = $"search error: wildcard '?' is not allowed in this context";
                     }
@@ -2145,12 +2145,7 @@ namespace SearchPlusPlus
                 end = start;
                 start = swap;
             }
-
-            if (end < min || max < end)
-            {
-                return false;
-            }
-            if (start < min || max < start)
+            if (!(min <= end && end <= max) || !(min <= start && start <= max))
             {
                 return false;
             }

@@ -355,7 +355,6 @@ namespace SearchPlusPlus
                 switch (Math.Abs(SearchPatch.validFilters[key.StartsWith("-") ? key.Substring(1) : key]))
                 {
                     case 1:
-                    case 3:
                         return value;
                     default:
                         if (value.Contains(' ') || value.Contains('"') || value.Contains('|') || value.Contains(':'))
