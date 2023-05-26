@@ -69,17 +69,21 @@ All advanced searches made using this mod must be preceded by `search:`
 - `fc:range`
 	- Given difficulties are FC-d (full combo)
 	- Supports `?` => selects highest difficulty
-- `ap`
-	- All difficulties of a song are AP-d (all perfect)
-- `ap:range`
-	- Given difficulties are AP-d (all perfect)
+- `acc:range`
+	- All difficulties of a song have an accuracy within the given range
+- `acc:"range1 range2"`
+	- All difficulties of a song that are within `range2` that have an accuracy within `range1`
 	- Supports `?` => selects highest difficulty
 - `custom`
 	- The song is a custom song
 - `eval:string`
     - See the `Evaluate Tag` section
 - `def:string`
-	- See the `Custom Tags` section.
+	- See the `Custom tags` section.
+- `add:string`
+	- See the `Custom tag parameters` section.
+- `prefix:string`
+	- See the `Custom tag parameters` section.
 
 **Strings:**
 - Searching terms with spaces must be done in a string (quotes): `key:"value with spaces"`
@@ -103,8 +107,6 @@ All advanced searches made using this mod must be preceded by `search:`
 - `eval:string`
 - The value inside will be evaluated as a seperate search
 - The tag can be nested (e.g. `eval:"eval:tag1"`)
-- Keep in mind that unlike all other tags, this tag is parsed while searching, not before
-    - e.g. the tag takes more time to run.
 
 ### **Parsing info**
 - The characters `:`, `"`, `|` and spaces must be enclosed in a string to be searched.

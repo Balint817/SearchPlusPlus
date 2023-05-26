@@ -7,12 +7,16 @@ using System.Text;
 using System.Collections.Generic;
 using Assets.Scripts.PeroTools.Nice.Actions;
 using Assets.Scripts.PeroTools.Nice.Interface;
+using System.Linq;
 
 namespace SearchPlusPlus
 {
     public static class Utils
     {
         internal const string Separator = "--------------------------------";
+
+        internal static List<int> DifficultyResultAll = Enumerable.Range(1,5).ToList();
+        internal static List<int> DifficultyResultEmpty = new List<int>();
         public static Il2CppSystem.Collections.Generic.List<T> IL_List<T>(params T[] args)
         {
             var list = new Il2CppSystem.Collections.Generic.List<T>();

@@ -76,6 +76,7 @@
   <ItemGroup>
     <Compile Include="RefreshPatch.cs" />
     <Compile Include="SearchPatch.cs" />
+    <Compile Include="SearchAbstract.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="ModMain.cs" />
     <Compile Include="MelonBuildInfo.cs" />

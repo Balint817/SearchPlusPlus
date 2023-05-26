@@ -500,6 +500,7 @@ namespace SearchPlusPlus
             ["eval"] = 2,
             ["custom"] = 0,
             ["add"] = 2,
+            ["prefix"] = 2,
             //["clears"] = 3,
         };
 
@@ -510,6 +511,7 @@ namespace SearchPlusPlus
             ["touhou"] = 1,
             ["scene"] = 1,
             ["add"] = 1,
+            ["prefix"] = 1,
             ["any"] = 4,
             ["anyx"] = 5,
             ["unplayed"] = 10,
