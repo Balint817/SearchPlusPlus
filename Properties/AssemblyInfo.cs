@@ -11,12 +11,8 @@ using MelonLoader;
 // associated with an assembly.
 [assembly: AssemblyTitle(MelonBuildInfo.Name)]
 [assembly: AssemblyDescription(MelonBuildInfo.Description)]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany(MelonBuildInfo.Company)]
 [assembly: AssemblyProduct(MelonBuildInfo.Name)]
-[assembly: AssemblyCopyright("Copyright ©  2023")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
+[assembly: MelonIncompatibleAssemblies()]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
