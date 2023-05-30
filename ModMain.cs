@@ -205,13 +205,12 @@ namespace SearchPlusPlus
             MelonLogger.Msg("Hello World!");
         }
 
-        internal static string[] RankedHashes = new string[0];
         internal static void LoadHQ()
         {
             const string SB_API = "https://mdmc.moe/api/v5/sb";
             try
             {   
-                RankedHashes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string,string>>>(Utils.GetRequestString(SB_API)).Values.SelectMany(x => x.Values).ToArray();
+                SearchPatch.isHeadquarters = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string,string>>>(Utils.GetRequestString(SB_API)).Values.SelectMany(x => x.Values).ToHashSet();
                 MelonLogger.Msg("Headquarters 'ranked' tag initialized");
             }
             catch (Exception ex)
