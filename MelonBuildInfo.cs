@@ -10,7 +10,7 @@ namespace SearchPlusPlus
 
         public const string Author = "PBalint817";
 
-        public const string Version = "3.6.0";
+        public const string Version = "3.6.1";
 
         public const string DownloadLink = "https://github.com/Balint817/SearchPlusPlus";
     }
