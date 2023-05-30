@@ -1730,7 +1730,9 @@ namespace SearchPlusPlus
         }
         internal static bool EvalRanked(MusicInfo musicInfo)
         {
-            return isHeadquarters.Contains(musicInfo.uid);
+            if (!EvalCustom(musicInfo)) return false;
+            return AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Values.Any(x => isHeadquarters.Contains(x));
+
         }
         internal static bool EvalCinema(MusicInfo musicInfo)
         {

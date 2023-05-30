@@ -211,7 +211,7 @@ namespace SearchPlusPlus
             try
             {   
                 SearchPatch.isHeadquarters = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string,string>>>(Utils.GetRequestString(SB_API)).Values.SelectMany(x => x.Values).ToHashSet();
-                MelonLogger.Msg("Headquarters 'ranked' tag initialized");
+                MelonLogger.Msg($"Headquarters 'ranked' tag initialized ({SearchPatch.isHeadquarters.Count})");
             }
             catch (Exception ex)
             {
