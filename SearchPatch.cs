@@ -571,7 +571,6 @@ namespace SearchPlusPlus
         internal static string searchError = null;
         internal static bool Prefix(ref bool __result, PeroString peroString, MusicInfo musicInfo, string containsText)
         {
-            var s = "";
             if (searchError != null)
             {
                 return __result = false;

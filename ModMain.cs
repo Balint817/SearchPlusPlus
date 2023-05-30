@@ -19,13 +19,6 @@ namespace SearchPlusPlus
 
         internal const string apiLink = "https://mdmc.moe/api/v5/charts";
         internal const string mapFormat = "https://mdmc.moe/charts/{0}/map{1}.bms";
-        internal static bool HQToggle
-        {
-            get
-            {
-                return hqToggle.Value;
-            }
-        }
 
         internal static bool ForceErrorCheck
         {
@@ -45,22 +38,20 @@ namespace SearchPlusPlus
 
         internal static Dictionary<string, List<List<KeyValuePair<string, string>>>> customTags = new Dictionary<string, List<List<KeyValuePair<string, string>>>>();
 
-        internal static MelonPreferences_Entry<bool> hqToggle;
-
         internal static MelonPreferences_Entry<bool> forceErrorCheckToggle;
 
         internal static MelonPreferences_Entry<bool> recursionToggle;
 
         public override void OnApplicationQuit()
         {
-            hqToggle.Category.SaveToFile(false);
+            recursionToggle.Category.SaveToFile(false);
         }
 
         public override void OnLateInitializeMelon()
         {
             var category = MelonPreferences.CreateCategory("SearchPlusPlus");
             category.SetFilePath("UserData/SearchPlusPlus.cfg");
-            hqToggle = category.CreateEntry<bool>("HQSearchToggle", false, "EnableRankedTag", "\nWhether the \"ranked\" tag is enabled.");
+
             forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", true, "ForceErrorChecks", "\nIf enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve search times.");
             recursionToggle = category.CreateEntry<bool>("RecursionToggle", false, "AllowCustomReference", "\nIf disabled, will prevent you from using 'def' inside 'eval' or custom tag definitions.\nDisabled by default so you don't accidentally create a self-reference and freeze the game.\nUse only if you know what you're doing!");
             var customTagsEntry = category.CreateEntry<Dictionary<string, string>>("CustomSearchTags", new Dictionary<string, string>(), "CustomSearchTags", "\nDefine custom tags here. (Custom tags may not reference other custom tags)");
@@ -124,15 +115,7 @@ namespace SearchPlusPlus
             }
 
 
-            if (HQToggle)
-            {
-                LoadHQ();
-            }
-            else
-            {
-                MelonLogger.Msg(ConsoleColor.DarkMagenta, "\"ranked\" tag is disabled.");
-                SearchPatch.validFilters.Remove("ranked");
-            }
+            LoadHQ();
 
             MelonLogger.Msg("Loading custom search tags...");
 
@@ -140,15 +123,16 @@ namespace SearchPlusPlus
             string filterKey = "| :\\\"";
             foreach (var item in customTagsEntry.Value)
             {
+                string errors;
+                int groupIdx = -1;
                 MelonLogger.Msg(Utils.Separator);
                 
                 foreach (var c in filterKey)
                 {
                     if (item.Key.Contains(c))
                     {
-                        MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                        MelonLogger.Msg(ConsoleColor.Red, $"syntax error: key cannot contain ß{c}ß");
-                        continue;
+                        errors = $"syntax error: key cannot contain ß{c}ß";
+                        goto breakLoop;
                     }
                 }
 
@@ -168,16 +152,15 @@ namespace SearchPlusPlus
                     }
                     continue;
                 }
-                int groupIdx = 0;
-                string errors;
+                groupIdx = 0;
                 foreach (var group in result)
                 {
                     foreach (var term in group)
                     {
                         if (term.Key == "def" && !RecursionEnabled)
                         {
-                            MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                            MelonLogger.Msg(ConsoleColor.Red, "input error: the \"def\" tag is not allowed in this context");
+                            errors = "input error: the \"def\" tag is not allowed in this context";
+                            goto breakLoop;
                         }
                         if (!SearchPatch.CheckFilter(term, out errors))
                         {
@@ -201,7 +184,7 @@ namespace SearchPlusPlus
                 continue;
             breakLoop:
                 MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                MelonLogger.Msg(ConsoleColor.Red, errors + $" (tag no. {groupIdx + 1})");
+                MelonLogger.Msg(ConsoleColor.Red, errors + (groupIdx == -1 ? "" : $" (tag no. {groupIdx + 1})"));
             }
             MelonLogger.Msg(Utils.Separator);
             MelonLogger.Msg($"Loaded {customTags.Count} custom tags");
@@ -222,156 +205,19 @@ namespace SearchPlusPlus
             MelonLogger.Msg("Hello World!");
         }
 
-
+        internal static string[] RankedHashes = new string[0];
         internal static void LoadHQ()
         {
+            const string SB_API = "https://mdmc.moe/api/v5/sb";
             try
-            {
-
-                MelonLogger.Msg("Sending requests to headquarters...");
-                MelonLogger.Msg(ConsoleColor.DarkMagenta, "Disable this tag if your internet is slow, because this WILL take a while.");
-
-                var storeResults = new JObject();
-
-                if (File.Exists("UserData/.SppStorage.json"))
-                {
-                    storeResults = JsonConvert.DeserializeObject<JObject>(File.ReadAllText("UserData/.SppStorage.json"));
-                }
-                try
-                {
-                    storeResults["lastChecked"].ToObject<DateTime>();
-                }
-                catch (Exception)
-                {
-                    storeResults["lastChecked"] = DateTime.MinValue;
-                }
-
-                try
-                {
-                    storeResults["charts"].ToObject<Dictionary<string, JObject>>();
-                }
-                catch (Exception)
-                {
-                    storeResults["charts"] = new JObject();
-                }
-
-                var lastChecked = storeResults["lastChecked"].ToObject<DateTime>();
-                MelonLogger.Msg($"Last checked: {lastChecked.ToString()} UTC");
-                
-                JArray jArr = JsonConvert.DeserializeObject<JArray>(Utils.GetRequestString(apiLink));
-
-                int counter = 0;
-                double accumulate = 0;
-                int arrLength = jArr.Count;
-                double increment = 1d / arrLength;
-                foreach (JObject item in jArr)
-                {
-                    var id = (string)item["id"];
-                    for (int i = 1; i < 6; i++)
-                    {
-                        if (!item.ContainsKey($"difficulty{i}"))
-                        {
-                            continue;
-                        }
-                        var diffString = (string)item[$"difficulty{i}"];
-                        if (string.IsNullOrEmpty(diffString) || diffString == "0")
-                        {
-                            continue;
-                        }
-                        var request = Utils.GetRequestInstance(string.Format(mapFormat, id, i), lastChecked);
-
-                        HttpWebResponse HttpResponse = null;
-                        try
-                        {
-                            HttpResponse = (HttpWebResponse)request.GetResponse();
-                        }
-                        catch (WebException ex)
-                        {
-                            HttpResponse = (HttpWebResponse)ex.Response;
-                            if (HttpResponse.StatusCode == HttpStatusCode.NotModified)
-                            {
-                                try
-                                {
-                                    var findAlbumCached = AlbumManager.LoadedAlbumsByUid.FirstOrDefault(x => x.Value.availableMaps.ContainsValue((string)((JObject)((JObject)storeResults["charts"])[id])[i.ToString()]));
-                                    if (findAlbumCached.Key == null)
-                                    {
-                                        continue;
-                                    }
-                                    SearchPatch.isHeadquarters.Add(findAlbumCached.Key);
-                                    break;
-                                }
-                                catch (Exception)
-                                {
-                                    MelonLogger.Msg(ConsoleColor.DarkRed, $"failed to load {id}-{i} from cache");
-                                    request = Utils.GetRequestInstance(string.Format(mapFormat, id, i));
-                                    try
-                                    {
-                                        HttpResponse = (HttpWebResponse)request.GetResponse();
-                                        MelonLogger.Msg(ConsoleColor.DarkRed, $"resending request...");
-                                        goto forceContinue;
-                                    }
-                                    catch (Exception)
-                                    {
-
-                                    }
-                                }
-                            }
-                            HttpResponse.Dispose();
-                            continue;
-                        }
-                        forceContinue: { }
-                        if (HttpResponse.StatusCode != HttpStatusCode.OK)
-                        {
-                            continue;
-                        }
-
-                        byte[] readBytes;
-                        using (Stream stream = HttpResponse.GetResponseStream())
-                        {
-                            readBytes = Utils.ReadFully(stream);
-                        }
-
-
-                        string response = Encoding.UTF8.GetString(readBytes, 0, readBytes.Length);
-
-                        if (string.IsNullOrEmpty(response) || response.StartsWith("<") || response.StartsWith("{") || response.StartsWith("["))
-                        {
-                            continue;
-                        }
-                        string hash = readBytes.GetMD5().ToString("x2");
-
-                        if (!((JObject)storeResults["charts"]).ContainsKey(id))
-                        {
-                            ((JObject)storeResults["charts"])[id] = new JObject();
-                        }
-                        ((JObject)((JObject)storeResults["charts"])[id])[i.ToString()] = hash;
-
-                        var findAlbum = AlbumManager.LoadedAlbumsByUid.FirstOrDefault(x => x.Value.availableMaps.ContainsValue(hash));
-                        if (findAlbum.Equals(default))
-                        {
-                            continue;
-                        }
-                        SearchPatch.isHeadquarters.Add(findAlbum.Key);
-                        HttpResponse.Dispose();
-
-                    }
-
-                    counter++;
-                    accumulate += increment;
-                    if (accumulate > 0.05)
-                    {
-                        accumulate = 0;
-                        MelonLogger.Msg(ConsoleColor.Blue, $"~{Math.Floor(counter * 20d / arrLength)*5}%");
-                    }
-                }
-                storeResults["lastChecked"] = DateTime.UtcNow;
-                MelonLogger.Msg("Headquarters tag initialized");
-                File.WriteAllText("UserData/.SppStorage.json", JsonConvert.SerializeObject(storeResults));
+            {   
+                RankedHashes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string,string>>>(Utils.GetRequestString(SB_API)).Values.SelectMany(x => x.Values).ToArray();
+                MelonLogger.Msg("Headquarters 'ranked' tag initialized");
             }
             catch (Exception ex)
             {
                 MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
-                MelonLogger.Msg(ConsoleColor.Yellow, "If you're seeing this, then I have absolutely 0 clue how. Either way, the headquarters tag won't work. (e.g. please report lmao)");
+                MelonLogger.Msg(ConsoleColor.Yellow, "If you're seeing this, then I have absolutely 0 clue how. Either way, the headquarters 'ranked' tag won't work.");
             }
         }
 
