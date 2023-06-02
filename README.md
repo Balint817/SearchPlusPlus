@@ -76,6 +76,8 @@ All advanced searches made using this mod must be preceded by `search:`
 	- Supports `?` => selects highest difficulty
 - `custom`
 	- The song is a custom song
+- `ranked`
+	- The song is a ranked custom song
 - `eval:string`
     - See the `Evaluate Tag` section
 - `def:string`
