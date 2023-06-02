@@ -130,9 +130,9 @@ All advanced searches made using this mod must be preceded by `search:`
 - This tag allows you to call upon these saved search terms.
 - This tag cannot appear inside an `eval` statement, nor can it appear inside another tag definition.
 - Reason:
-    - tag1 = "def:tag2|diff:1"
-    - tag2 = "def:tag1|diff:2"
-    - Search: `tag1 tag2`
+    - tag1 = "def:tag2"
+    - tag2 = "def:tag1"
+    - Search: `def:"tag1"`
     - The tags referencing each other would turn into an infinite loop
     - This not only makes it impossible to evaluate, it will also freeze the game.
 - This behavior can be toggled off, but make sure that you know what you're doing.
