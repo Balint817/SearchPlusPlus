@@ -140,11 +140,10 @@ All advanced searches made using this mod must be preceded by `search:`
 ### **Cascaded custom tags**
 - `def:"mytag:value"`
 - The value after `:` will override values assigned to tags inside the custom tags.
-- Essentially allows you to give input to custom tags.
-- For the `eval` tag, the values inside it are overwritten instead.
+- For the `eval` tag, the values of the terms inside it are overwritten instead of the entire input.
 - For nested `def` (if enabled):
 	- If an empty value is given (`def:"mytag:"`), it'll inherit the value.
-	- Otherwise, the value remains unchanged.
+	- If a non-empty value (`def:"mytag:value"`) or no value (`def:"mytag"`) is given, the value is unaffected.
 
 ### **Custom tag parameters**
 - `def:"mytag::\"value1\" \"value2\" ... \"valueX\""`
