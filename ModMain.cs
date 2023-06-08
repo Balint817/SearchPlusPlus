@@ -10,6 +10,7 @@ using Ionic.Zip;
 using System.Net;
 using System.Text;
 using Assets.Scripts.Database;
+using PeroPeroGames;
 
 namespace SearchPlusPlus
 {
@@ -36,62 +37,87 @@ namespace SearchPlusPlus
             }
         }
 
-        internal static Dictionary<string, List<List<KeyValuePair<string, string>>>> customTags = new Dictionary<string, List<List<KeyValuePair<string, string>>>>();
+        internal static Dictionary<string, List<List<SearchTerm>>> customTags = new Dictionary<string, List<List<SearchTerm>>>();
 
         internal static MelonPreferences_Entry<bool> forceErrorCheckToggle;
 
         internal static MelonPreferences_Entry<bool> recursionToggle;
 
+        internal static MelonPreferences_Entry<Dictionary<string, string>> customTagsEntry;
+
+        internal static MelonPreferences_Entry<Dictionary<string, string>> aliasEntry;
+
+        internal static bool InitFinished = false;
         public override void OnApplicationQuit()
         {
             recursionToggle.Category.SaveToFile(false);
         }
-
+        public override void OnPreferencesLoaded()
+        {
+            if (!InitFinished)
+            {
+                return;
+            }
+            MelonLogger.Msg(ConsoleColor.Magenta, "Re-loading custom tags...");
+            LoadCustomTags();
+            MelonLogger.Msg(ConsoleColor.Magenta, "Re-loading aliases...");
+            LoadAliases();
+        }
         public override void OnLateInitializeMelon()
         {
             var category = MelonPreferences.CreateCategory("SearchPlusPlus");
             category.SetFilePath("UserData/SearchPlusPlus.cfg");
 
-            forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", true, "ForceErrorChecks", "\nIf enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve search times.");
-            recursionToggle = category.CreateEntry<bool>("RecursionToggle", false, "AllowCustomReference", "\nIf disabled, will prevent you from using 'def' inside 'eval' or custom tag definitions.\nDisabled by default so you don't accidentally create a self-reference and freeze the game.\nUse only if you know what you're doing!");
-            var customTagsEntry = category.CreateEntry<Dictionary<string, string>>("CustomSearchTags", new Dictionary<string, string>(), "CustomSearchTags", "\nDefine custom tags here. (Custom tags may not reference other custom tags)");
-
             ServicePointManager.DefaultConnectionLimit = 100;
             WebRequest.DefaultWebProxy = null;
+
+            MelonLogger.Msg("Registering builtins...");
+
+            SearchParser.RegisterKey("acc", BuiltIns.Term_Acc);
+            SearchParser.RegisterKey("any", BuiltIns.Term_Any);
+            SearchParser.RegisterKey("anyx", BuiltIns.Term_AnyX);
+            SearchParser.RegisterKey("author", BuiltIns.Term_Author);
+            SearchParser.RegisterKey("bpm", BuiltIns.Term_BPM);
+            SearchParser.RegisterKey("cinema", BuiltIns.Term_Cinema);
+            SearchParser.RegisterKey("custom", BuiltIns.Term_Custom);
+            SearchParser.RegisterKey("def", BuiltIns.Term_Def);
+            SearchParser.RegisterKey("design", BuiltIns.Term_Designer);
+            SearchParser.RegisterKey("designer", BuiltIns.Term_Designer, true);
+            SearchParser.RegisterKey("diff", BuiltIns.Term_Diff);
+            SearchParser.RegisterKey("eval", BuiltIns.Term_Eval);
+            SearchParser.RegisterKey("fc", BuiltIns.Term_FC);
+            SearchParser.RegisterKey("hidden", BuiltIns.Term_Hidden);
+            SearchParser.RegisterKey("ranked", BuiltIns.Term_Ranked);
+            SearchParser.RegisterKey("headquarters", BuiltIns.Term_Ranked, true);
+            SearchParser.RegisterKey("scene", BuiltIns.Term_Scene);
+            SearchParser.RegisterKey("tag", BuiltIns.Term_Tag);
+            SearchParser.RegisterKey("title", BuiltIns.Term_Title);
+            SearchParser.RegisterKey("touhou", BuiltIns.Term_Touhou);
+            SearchParser.RegisterKey("unplayed", BuiltIns.Term_Unplayed);
+
 
             MelonLogger.Msg("Loading search tags...");
             string response = null;
             try
             {
-                response = Utils.GetRequestString(SearchPatch.advancedJsonUrl);
+                response = Utils.GetRequestString(BuiltIns.advancedJsonUrl);
 
-                var json = JsonConvert.DeserializeObject<Dictionary<string, JObject>>(response);
+                var json = JsonConvert.DeserializeObject<JObject>(response);
                 var result = new Dictionary<string, string[]>();
-                foreach (var item in json["author"])
+                foreach (var chart in json["album"].ToObject<Dictionary<string, Dictionary<string, JValue>>>())
                 {
-                    if (!result.ContainsKey(item.Key))
+                    string uid = chart.Key;
+                    Dictionary<string, JValue> chartData = chart.Value;
+                    var tags = new List<string>()
                     {
-                        result[item.Key] = new string[0];
-                    }
-                    result[item.Key] = Enumerable.Append(result[item.Key], item.Value.ToObject<string>()).ToArray();
+                        chartData["name"].ToObject<string>(),
+                        chartData["author"].ToObject<string>(),
+                        chartData["design"].ToObject<string>()
+                    };
+                    tags.Append(string.Join("\0", tags));
+                    result[uid] = tags.ToArray();
                 }
-                foreach (var item in json["name"])
-                {
-                    if (!result.ContainsKey(item.Key))
-                    {
-                        result[item.Key] = new string[0];
-                    }
-                    result[item.Key] = Enumerable.Append(result[item.Key], item.Value.ToObject<string>()).ToArray();
-                }
-                foreach (var item in json["design"])
-                {
-                    if (!result.ContainsKey(item.Key))
-                    {
-                        result[item.Key] = new string[0];
-                    }
-                    result[item.Key] = Enumerable.Append(result[item.Key], item.Value.ToObject<string>().Substring(1).Trim(' ')).ToArray();
-                }
-                SearchPatch.searchTags = result;
+                BuiltIns.searchTags = result;
 
             }
             catch (Exception ex)
@@ -104,7 +130,7 @@ namespace SearchPlusPlus
             try
             {
                 MelonLogger.Msg("Checking charts for cinemas, this shouldn't take long...");
-                SearchPatch.hasCinema = AlbumManager.LoadedAlbumsByUid.Where(x => TryParseCinemaJson(x.Value)).Select(x => x.Key).ToHashSet();
+                BuiltIns.hasCinema = AlbumManager.LoadedAlbumsByUid.Where(x => TryParseCinemaJson(x.Value)).Select(x => x.Key).ToHashSet();
                 MelonLogger.Msg("Cinema tag initialized");
             }
             catch (Exception ex)
@@ -114,81 +140,24 @@ namespace SearchPlusPlus
                 MelonLogger.Msg(ConsoleColor.Yellow, "If you're seeing this, then I have absolutely 0 clue how. Either way, the cinema tag won't work. (e.g. please report lmao)");
             }
 
-
             LoadHQ();
 
+            InitFinished = true;
+
             MelonLogger.Msg("Loading custom search tags...");
+            customTagsEntry = category.CreateEntry<Dictionary<string, string>>("CustomSearchTags", new Dictionary<string, string>(), "CustomSearchTags", "\nDefine custom tags here. (Custom tags may not reference other custom tags)");
+            recursionToggle = category.CreateEntry<bool>("RecursionToggle", false, "AllowCustomReference", "\nIf disabled, will prevent you from using 'def' inside 'eval' or custom tag definitions.\nDisabled by default so you don't accidentally create a self-reference and freeze the game.\nUse only if you know what you're doing!");
 
+            LoadCustomTags();
 
-            string filterKey = "| :\\\"";
-            foreach (var item in customTagsEntry.Value)
-            {
-                string errors;
-                int groupIdx = -1;
-                MelonLogger.Msg(Utils.Separator);
-                
-                foreach (var c in filterKey)
-                {
-                    if (item.Key.Contains(c))
-                    {
-                        errors = $"syntax error: key cannot contain ß{c}ß";
-                        goto breakLoop;
-                    }
-                }
-
-                string text = item.Value.ToLower().Trim(' ');
-
-                var result = new List<List<KeyValuePair<string, string>>>();
-
-
-                var parseResult = SearchPatch.TryParseInputWithLogs(text, out result);
-                if (!parseResult.Key)
-                {
-                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                    MelonLogger.Msg(ConsoleColor.Red, parseResult.Value[0]);
-                    if (parseResult.Value.Length > 1)
-                    {
-                        MelonLogger.Msg(ConsoleColor.Magenta, parseResult.Value[1]);
-                    }
-                    continue;
-                }
-                groupIdx = 0;
-                foreach (var group in result)
-                {
-                    foreach (var term in group)
-                    {
-                        if (term.Key == "def" && !RecursionEnabled)
-                        {
-                            errors = "input error: the \"def\" tag is not allowed in this context";
-                            goto breakLoop;
-                        }
-                        if (!SearchPatch.CheckFilter(term, out errors))
-                        {
-                            goto breakLoop;
-                        }
-                        groupIdx++;
-                    }
-                }
-
-
-                try
-                {
-                    result = RefreshPatch.SortSearchTags(RefreshPatch.OptimizeSearchTags(result));
-                }
-                catch (Exception)
-                {
-                    //MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to optimize custom tag \"{item.Key}\" (you shouldn't be able to see this)");
-                }
-                customTags[item.Key.ToLower()] = result;
-                MelonLogger.Msg($"Parsed custom tag \"{item.Key}\": ß" + string.Join(" ", result.Select(x1 => string.Join("|", x1.Select(x2 => RefreshPatch.PairToString(x2))))) + 'ß');
-                continue;
-            breakLoop:
-                MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                MelonLogger.Msg(ConsoleColor.Red, errors + (groupIdx == -1 ? "" : $" (tag no. {groupIdx + 1})"));
-            }
             MelonLogger.Msg(Utils.Separator);
-            MelonLogger.Msg($"Loaded {customTags.Count} custom tags");
 
+            MelonLogger.Msg("Loading aliases...");
+            aliasEntry = category.CreateEntry<Dictionary<string, string>>("TagAliases", new Dictionary<string, string>(), "TagAliases", "\nDefines aliases here. (improved custom tags)\nAlias references WILL yield unstable results. If necessary, enable recursion and use 'def' instead.");
+
+
+            LoadAliases();
+            MelonLogger.Msg(Utils.Separator);
 
             MelonLogger.Msg("Recovering advanced search...");
 
@@ -202,16 +171,112 @@ namespace SearchPlusPlus
                 MelonLogger.Msg(ConsoleColor.DarkRed, "Failed to recover advanced search results. This is a critical error, the mod will NOT work.");
             }
 
+            forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", true, "ForceErrorChecks", "\nIf enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve search times.");
+
+            if (category.HasEntry("HQSearchToggle"))
+            {
+                category.DeleteEntry("HQSearchToggle");
+            }
             MelonLogger.Msg("Hello World!");
         }
 
+        private void LoadAliases()
+        {
+            SearchParser.ClearAliases();
+            foreach (var item in aliasEntry.Value)
+            {
+                MelonLogger.Msg(Utils.Separator);
+                try
+                {
+                    SearchEvaluator function = (musicInfo, peroString, value, valueOverride) =>
+                    {
+                        if (value != string.Empty)
+                        {
+                            valueOverride = null;
+                        }
+                        else
+                        {
+                            value = valueOverride;
+                        }
+                        return BuiltIns.Term_Eval(musicInfo, peroString, item.Value, value);
+                    };
+                    SearchParser.RegisterAlias(item.Key, function);
+                    MelonLogger.Msg($"Successfully loaded alias '{item.Key}'");
+                }
+                catch (Exception ex)
+                {
+                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load alias '{item.Key}'");
+                    MelonLogger.Msg(ConsoleColor.Red, $"Message: {ex.Message}");
+                }
+            }
+        }
+
+        private void LoadCustomTags()
+        {
+            customTags.Clear();
+            const string filterKey = "| :\\\"";
+            foreach (var item in customTagsEntry.Value)
+            {
+                MelonLogger.Msg(Utils.Separator);
+                var firstMatch = item.Key.FirstOrDefault(x => filterKey.Contains(x));
+                if (firstMatch != '\0')
+                {
+                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
+                    MelonLogger.Msg(ConsoleColor.Red, $"syntax error: key cannot contain ß{firstMatch}ß");
+                    continue;
+                }
+
+                string text = item.Value.ToLower().Trim(' ');
+
+                var result = SearchParser.ParseSearchText(text);
+
+                var getError = SearchParser.GetSearchError(result);
+                if (getError != null)
+                {
+                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
+                    MelonLogger.Msg(ConsoleColor.Red, getError.Message);
+                    if (getError.Suggestion != null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Magenta, getError.Suggestion);
+                    }
+                    continue;
+                }
+
+                if (!CheckRules(result, item.Key))
+                {
+                    continue;
+                }
+
+                customTags[item.Key.ToLower()] = result;
+                MelonLogger.Msg($"Parsed custom tag \"{item.Key}\": ß" + string.Join(" ", result.Select(x1 => string.Join("|", x1.Select(x2 => RefreshPatch.TermToString(x2))))) + 'ß');
+            }
+            MelonLogger.Msg(Utils.Separator);
+            MelonLogger.Msg($"Loaded {customTags.Count} custom tags");
+        }
+
+        internal static bool CheckRules(List<List<SearchTerm>> parseResult, string tagName)
+        {
+            foreach (var group in parseResult)
+            {
+                foreach (var term in group)
+                {
+                    if (term.Key == "def" && !RecursionEnabled)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{tagName}ß");
+                        MelonLogger.Msg(ConsoleColor.Red, "input error: the \"def\" tag is not allowed in this context");
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
         internal static void LoadHQ()
         {
             const string SB_API = "https://mdmc.moe/api/v5/sb";
             try
-            {   
-                SearchPatch.isHeadquarters = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string,string>>>(Utils.GetRequestString(SB_API)).Values.SelectMany(x => x.Values).ToHashSet();
-                MelonLogger.Msg($"Headquarters 'ranked' tag initialized ({SearchPatch.isHeadquarters.Count})");
+            {
+                BuiltIns.isHeadquarters = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string,string>>>(Utils.GetRequestString(SB_API)).Values.SelectMany(x => x.Values).ToHashSet();
+                MelonLogger.Msg($"Headquarters 'ranked' tag initialized ({BuiltIns.isHeadquarters.Count})");
             }
             catch (Exception ex)
             {

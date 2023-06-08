@@ -8,6 +8,10 @@ using System.Collections.Generic;
 using Assets.Scripts.PeroTools.Nice.Actions;
 using Assets.Scripts.PeroTools.Nice.Interface;
 using System.Linq;
+using PeroPeroGames;
+using Assets.Scripts.Database;
+using CustomAlbums;
+using System.Text.RegularExpressions;
 
 namespace SearchPlusPlus
 {
@@ -15,8 +19,8 @@ namespace SearchPlusPlus
     {
         internal const string Separator = "--------------------------------";
 
-        internal static List<int> DifficultyResultAll = Enumerable.Range(1,5).ToList();
-        internal static List<int> DifficultyResultEmpty = new List<int>();
+        internal static readonly List<int> DifficultyResultAll = Enumerable.Range(1,5).ToList();
+        internal static readonly List<int> DifficultyResultEmpty = new List<int>();
         public static Il2CppSystem.Collections.Generic.List<T> IL_List<T>(params T[] args)
         {
             var list = new Il2CppSystem.Collections.Generic.List<T>();
@@ -201,6 +205,29 @@ namespace SearchPlusPlus
             stream.Position = 0;
             return stream;
         }
+
+        internal static readonly Regex regexBPM = new Regex(@"^[0-9]*\.[0-9]+[^0-9.][0-9]*\.[0-9]+$");
+
+        internal static readonly Regex regexNonNumeric = new Regex(@"[^0-9.]");
+        public static bool DetectParseRange(string input, out double start, out double end, double min, double max)
+        {
+            start = end = double.NaN;
+            if (!regexBPM.IsMatch(input))
+            {
+                return false;
+            }
+            return ParseRange(input.Replace(regexNonNumeric.Match(input).Value, "-"), out start, out end, min, max) ?? false;
+        }
+        public static bool DetectParseRange(string input, out double start, out double end)
+        {
+            start = end = double.NaN;
+            input = input.Trim();
+            if (!regexBPM.IsMatch(input))
+            {
+                return false;
+            }
+            return ParseRange(input.Replace(regexNonNumeric.Match(input).Value, "-"), out start, out end, double.NegativeInfinity, double.PositiveInfinity) ?? false;
+        }
         public static string CreateMD5(string input)
         {
             using (System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create())
@@ -216,10 +243,151 @@ namespace SearchPlusPlus
                 return sb.ToString();
             }
         }
-
         internal static string GetRequestString(string uri)
         {
             return RequestToString(GetRequestInstance(uri));
+        }
+        internal static bool LowerContains(this PeroString peroString, string compareText, string containsText)
+        {
+            compareText = compareText ?? "";
+            containsText = containsText ?? "";
+            peroString.Clear();
+            peroString.Append(compareText.ToLower());
+            peroString.ToLower();
+            return (peroString.Contains(containsText) || compareText.ToLower().Contains(containsText));
+        }
+
+        public static readonly char[] splitChars = new char[] { '-' };
+        public static bool ParseRange(string expression, out double start, out double end)
+        {
+            return ParseRange(expression, out start, out end, double.NegativeInfinity, double.PositiveInfinity) ?? false;
+        }
+        public static bool? ParseRange(string expression, out double start, out double end, double min, double max)
+        {
+            start = double.NaN;
+            end = double.NaN;
+            if (string.IsNullOrEmpty(expression))
+            {
+                return null;
+            }
+            if (min > max)
+            {
+                var swap = min;
+                min = max;
+                max = swap;
+            }
+
+            expression = expression.Trim(' ');
+            if (expression == "*")
+            {
+                start = min;
+                end = max;
+                return true;
+            }
+            bool negateStart = expression.StartsWith("-");
+            if (negateStart)
+            {
+                expression = expression.Substring(1);
+            }
+
+            if (expression.EndsWith("+"))
+            {
+                if (!double.TryParse(expression.Substring(0, expression.Length - 1), out double x))
+                {
+                    return null;
+                }
+                start = x;
+                end = max;
+                if (negateStart)
+                {
+                    start *= -1;
+                }
+            }
+            else if (expression.EndsWith("-"))
+            {
+
+                if (!double.TryParse(expression.Substring(0, expression.Length-1), out double x))
+                {
+                    return null;
+                }
+                start = min;
+                end = x;
+                if (negateStart)
+                {
+                    end *= -1;
+                }
+            }
+            else if (expression.Contains('-'))
+            {
+                var splitTerm = expression.Split(splitChars, 2);
+                if (!double.TryParse(splitTerm[0], out start))
+                {
+                    return null;
+                }
+                if (!double.TryParse(splitTerm[1], out end))
+                {
+                    return null;
+                }
+                if (negateStart)
+                {
+                    start *= -1;
+                }
+            }
+            else
+            {
+                if (!double.TryParse(expression, out double x))
+                {
+                    return null;
+                }
+                if (negateStart)
+                {
+                    x *= -1;
+                }
+                start = x;
+                end = x;
+            }
+            if (start > end)
+            {
+                var swap = end;
+                end = start;
+                start = swap;
+            }
+            if (!(min <= end && end <= max) || !(min <= start && start <= max))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public static bool GetAvailableMaps(MusicInfo musicInfo, out HashSet<int> availableMaps)
+        {
+            return GetAvailableMaps(musicInfo, out availableMaps, out _);
+        }
+
+        public static bool GetAvailableMaps(MusicInfo musicInfo, out HashSet<int> availableMaps, out bool isCustom)
+        {
+            isCustom = BuiltIns.EvalCustom(musicInfo);
+            if (isCustom)
+            {
+                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
+            }
+            else
+            {
+                availableMaps = new HashSet<int>();
+                for (int i = 1; i < 6; i++)
+                {
+                    var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
+                    if (!(string.IsNullOrEmpty(musicDiff) || musicDiff == "0"))
+                    {
+                        availableMaps.Add(i);
+                    }
+                }
+            }
+            if (availableMaps.Count == 0)
+            {
+                return false;
+            }
+            return true;
         }
     }
 }

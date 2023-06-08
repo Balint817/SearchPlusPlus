@@ -74,6 +74,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BuiltIns.cs" />
     <Compile Include="RefreshPatch.cs" />
     <Compile Include="SearchPatch.cs" />
     <Compile Include="SearchAbstract.cs" />
