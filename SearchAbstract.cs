@@ -124,13 +124,19 @@ public static class SearchParser
             var groupResult = false;
             foreach (var term in termGroup)
             {
-                if (!isTop && !ModMain.RecursionEnabled && term.Key == "def")
+                var negate = term.Key.StartsWith("-");
+                var key = negate ? term.Key.Substring(1) : term.Key;
+                if (!IsKeyRegistered(key))
+                {
+                    return new SearchResponse($"search error: received unknown key \"{key}\"", -1, groupIdx);
+                }
+                if (!isTop && !ModMain.RecursionEnabled && key == "def")
                 {
                     return new SearchResponse("search error: the \"def\" tag is not allowed in this context", -1, groupIdx);
                 }
-                var termResult = GetByKey(term.Key)(musicInfo, peroString, term.Value, valueOverride);
+                var termResult = GetByKey(key)(musicInfo, peroString, term.Value, valueOverride);
 
-                if (termResult.Code == 0)
+                if (termResult.Code == (negate ? 1 : 0))
                 {
                     groupResult = true;
                     if (!ModMain.ForceErrorCheck)
@@ -144,53 +150,6 @@ public static class SearchParser
                     {
                         termResult.Position = groupIdx;
                     }
-                    return termResult;
-                };
-                groupIdx++;
-            }
-            if (!groupResult)
-            {
-                return SearchResponse.FailedTest;
-            }
-        }
-        return SearchResponse.PassedTest;
-    }
-
-    
-    public static SearchResponse EvaluateSearch(List<List<SearchTerm>> searchTerms, MusicInfo musicInfo, PeroString peroString, SearchTransformer transformer, string valueOverride = null)
-    {
-        var err = GetSearchError(searchTerms);
-        if (err != null)
-        {
-            return err;
-        }
-        int groupIdx = 0;
-        foreach (var termGroup in searchTerms)
-        {
-            var groupResult = false;
-            foreach (var term in termGroup)
-            {
-                if (!IsKeyRegistered(term.Key))
-                {
-                    return new SearchResponse($"search error: received unknown key \"{term.Key}\"", -1, groupIdx);
-                }
-                if (!ModMain.RecursionEnabled && term.Key == "def")
-                {
-                    return new SearchResponse("search error: the \"def\" tag is not allowed in this context", -1, groupIdx);
-                }
-                var termResult = GetByKey(term.Key)(musicInfo, peroString, transformer(musicInfo, term.Key, term.Value, valueOverride));
-
-                if (termResult.Code == 0)
-                {
-                    groupResult = true;
-                    if (!ModMain.ForceErrorCheck)
-                    {
-                        break;
-                    }
-                }
-                if (termResult.Code <= -1)
-                {
-                    termResult.Position = groupIdx;
                     return termResult;
                 };
                 groupIdx++;
@@ -226,7 +185,7 @@ public static class SearchParser
         return true;
     }
 
-    public static string IllegalChars = "\\\": |";
+    public static string IllegalChars = "\\\": |-";
 
     private static List<string> Aliases = new List<string>();
     public static void RegisterKey(string key, SearchEvaluator function, bool forceDuplicate = false)
@@ -306,6 +265,37 @@ public static class SearchParser
             var c = containsText[idx];
             switch (c)
             {
+                case '-':
+                    if (stringEnd)
+                    {
+                        return new List<List<SearchTerm>>() {
+                            new List<SearchTerm>() {
+                                new SearchTerm(
+                                    new SearchResponse($"syntax error at position {idx + 1}, expected '|' or ' ' after string terminator, got '{c}'", $"did you mean to escape ('\\\"') the previous quotation mark?", -2, idx)) } };
+                    }
+                    if (isString)
+                    {
+                        if (escape)
+                        {
+                            escape = false;
+                        }
+                        value += c;
+                        break;
+                    }
+                    if (isValue)
+                    {
+                        value += c;
+                        break;
+                    }
+                    if (key != null)
+                    {
+                        return new List<List<SearchTerm>>() {
+                            new List<SearchTerm>() {
+                                new SearchTerm(
+                                    new SearchResponse($"syntax error at position {idx + 1}, '{c}' may only appear directly at the start of a key or inside the value", -2, idx)) } };
+                    }
+                    key += c;
+                    break;
                 case '|':
                     if (isString)
                     {

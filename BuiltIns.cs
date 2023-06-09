@@ -439,15 +439,12 @@ namespace SearchPlusPlus
             {
                 return true;
             }
-            for (int i = 1; i <= 5; i++)
+            Utils.GetAvailableMaps(musicInfo, out var availableMaps);
+            foreach (var i in availableMaps)
             {
-                string musicLevelStringByDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                if (!(string.IsNullOrEmpty(musicLevelStringByDiff) || musicLevelStringByDiff == "0"))
+                if (pStr.LowerContains(musicInfo.GetLevelDesignerStringByIndex(i) ?? "", value))
                 {
-                    if (pStr.LowerContains(musicInfo.GetLevelDesignerStringByIndex(i) ?? "", value))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
             return false;
@@ -558,24 +555,31 @@ namespace SearchPlusPlus
                 return SearchResponse.FailedTest;
             }
             value = value.Trim(' ');
+            if (value == "?")
+            {
+                if (!availableMaps.Any())
+                {
+                    return SearchResponse.FailedTest;
+                }
+                return RefreshPatch.fullCombos.Contains(musicInfo.uid + "_" + availableMaps.Max())
+                    ? SearchResponse.PassedTest
+                    : SearchResponse.FailedTest;
+            }
             var result = Utils.ParseRange(value, out var start, out var end, 1, 5);
             if (result == null)
             {
-                if (value != "?")
-                {
-                    return new SearchResponse($"search error: failed to parse range \"{value}\"", -1);
-                }
+                return new SearchResponse($"search error: failed to parse range \"{value}\"", -1);
             }
             if (result == false)
             {
                 return new SearchResponse($"search error: \"{value}\" isn't within the acceptable range of values", -1);
             }
             availableMaps = availableMaps.Where(x => start <= x && x <= end).ToHashSet();
-            if (availableMaps.Count == 0)
+            if (!availableMaps.Any())
             {
                 return SearchResponse.FailedTest;
             }
-            for (int i = (int)start; i <= end; i++)
+            foreach (var i in availableMaps)
             {
                 string s = musicInfo.uid + "_" + i;
                 if (!RefreshPatch.fullCombos.Contains(s))
