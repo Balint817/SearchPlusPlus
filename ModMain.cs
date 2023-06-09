@@ -78,6 +78,7 @@ namespace SearchPlusPlus
             SearchParser.RegisterKey("anyx", BuiltIns.Term_AnyX);
             SearchParser.RegisterKey("author", BuiltIns.Term_Author);
             SearchParser.RegisterKey("bpm", BuiltIns.Term_BPM);
+            SearchParser.RegisterKey("callback", BuiltIns.Term_Callback);
             SearchParser.RegisterKey("cinema", BuiltIns.Term_Cinema);
             SearchParser.RegisterKey("custom", BuiltIns.Term_Custom);
             SearchParser.RegisterKey("def", BuiltIns.Term_Def);

@@ -158,9 +158,9 @@ namespace SearchPlusPlus
         }
         internal static SearchResponse EvalCallback(MusicInfo musicInfo, string value, byte type)
         {
-            if (string.IsNullOrEmpty(value))
+            if (value == null)
             {
-                return new SearchResponse($"input error: received null or empty value in 'diff'", -1);
+                return new SearchResponse($"input error: received null value in 'callback'", -1);
             }
             double rangeStart = 0;
             double rangeEnd = 0;
@@ -173,7 +173,8 @@ namespace SearchPlusPlus
 
             Utils.GetAvailableMaps(musicInfo, out var availableMaps);
 
-            foreach (int i in TermDiffTypes[type].Intersect(availableMaps))
+
+            foreach (int i in availableMaps)
             {
                 var x = musicInfo.GetCallBackMusicLevelIntByDiff(i, false);
                 if (rangeStart <= x && x <= rangeEnd)
@@ -726,7 +727,7 @@ namespace SearchPlusPlus
         }
         public static SearchResponse Term_Callback(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
         {
-            return EvalDiff(musicInfo, valueOverride ?? value, 0);
+            return EvalCallback(musicInfo, valueOverride ?? value, 0);
         }
 
 
