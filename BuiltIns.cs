@@ -4,9 +4,12 @@ using Assets.Scripts.PeroTools.Managers;
 using CustomAlbums;
 using MelonLoader;
 using MelonLoader.Preferences;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using PeroPeroGames;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -202,8 +205,43 @@ namespace SearchPlusPlus
         }
         internal static bool EvalCinema(MusicInfo musicInfo)
         {
-            return hasCinema.Contains(musicInfo.uid);
+            if (!EvalCustom(musicInfo))
+            {
+                return false;
+            }
+            var customInfo = AlbumManager.LoadedAlbumsByUid[musicInfo.uid];
+            if (!customInfo.IsPackaged)
+            {
+                try
+                {
+                    JObject items = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(Path.Combine(customInfo.BasePath, "cinema.json")));
+                    if (!File.Exists(Path.Combine(customInfo.BasePath, (string)items["file_name"])))
+                    {
+                        return false;
+                    }
+                    return true;
+                }
+                catch (Exception) { }
+                return false;
+            }
+            var lastModified = File.GetLastAccessTimeUtc(customInfo.BasePath);
+            if (lastChecked >= lastModified)
+            {
+                return hasCinema.Contains(musicInfo.uid);
+            }
+            isModified = true;
+            if (Utils.TryParseCinemaJson(customInfo))
+            {
+                hasCinema.Add(musicInfo.uid);
+                return true;
+            };
+            hasCinema.Remove(musicInfo.uid);
+            return false;
         }
+
+        internal static DateTime lastChecked;
+
+        internal static bool isModified;
         internal static bool EvalUnplayed(MusicInfo musicInfo)
         {
             string s = musicInfo.uid + "_";
@@ -290,7 +328,7 @@ namespace SearchPlusPlus
         }
         internal static void AddBPMInfo(MusicInfo musicInfo)
         {
-            if (!Utils.DetectParseRange(musicInfo.bpm, out var start, out var end))
+            if (!Utils.DetectParseBPM(musicInfo.bpm, out var start, out var end))
             {
                 bpmDict[musicInfo.uid] = new ValueRange<double>(start, end);
             }
@@ -644,9 +682,6 @@ namespace SearchPlusPlus
         {
             return EvalDiff(musicInfo, valueOverride ?? value, 0);
         }
-
-
-
 
 
         internal static Dictionary<string, string[]> searchTags = new Dictionary<string, string[]>

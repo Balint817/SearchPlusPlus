@@ -33,6 +33,10 @@ namespace SearchPlusPlus
                     MelonLogger.Msg(ConsoleColor.Magenta, SearchPatch.searchError.Suggestion);
                 }
             }
+            if (BuiltIns.isModified)
+            {
+                BuiltIns.lastChecked = DateTime.UtcNow;
+            }
         }
         internal static void Prefix()
         {
@@ -87,11 +91,16 @@ namespace SearchPlusPlus
             highScores = DataHelper.highest.ToSystem().Select(x => x.ScoresToObjects()).ToList();
             fullCombos = DataHelper.fullComboMusic.ToSystem();
             SearchPatch.isAdvancedSearch = true;
-            MelonLogger.Msg("Parsed tags: ß" + string.Join(" ", SearchPatch.tagGroups.Select(x1 => string.Join("|", x1.Select(x2 => TermToString(x2))))) + 'ß');
+            MelonLogger.Msg("Parsed tags: $" + string.Join(" ", SearchPatch.tagGroups.Select(x1 => string.Join("|", x1.Select(x2 => TermToString(x2))))) + '$');
         }
         internal static string TermToString(SearchTerm term)
         {
-            return term.Value == null ? $"{term.Key}" : $"{term.Key}:\"{term.Value}\"";
+            return term.Value == null ? $"{term.Key}" : $"{term.Key}:\"{EscapeValue(term.Value)}\"";
+        }
+
+        internal static string EscapeValue(string value)
+        {
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
         internal static void NullifyAdvancedSearch()
         {

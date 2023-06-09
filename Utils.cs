@@ -12,6 +12,9 @@ using PeroPeroGames;
 using Assets.Scripts.Database;
 using CustomAlbums;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Ionic.Zip;
 
 namespace SearchPlusPlus
 {
@@ -209,16 +212,7 @@ namespace SearchPlusPlus
         internal static readonly Regex regexBPM = new Regex(@"^[0-9]*\.[0-9]+[^0-9.][0-9]*\.[0-9]+$");
 
         internal static readonly Regex regexNonNumeric = new Regex(@"[^0-9.]");
-        public static bool DetectParseRange(string input, out double start, out double end, double min, double max)
-        {
-            start = end = double.NaN;
-            if (!regexBPM.IsMatch(input))
-            {
-                return false;
-            }
-            return ParseRange(input.Replace(regexNonNumeric.Match(input).Value, "-"), out start, out end, min, max) ?? false;
-        }
-        public static bool DetectParseRange(string input, out double start, out double end)
+        public static bool DetectParseBPM(string input, out double start, out double end, double min, double max)
         {
             start = end = double.NaN;
             input = input.Trim();
@@ -226,7 +220,11 @@ namespace SearchPlusPlus
             {
                 return false;
             }
-            return ParseRange(input.Replace(regexNonNumeric.Match(input).Value, "-"), out start, out end, double.NegativeInfinity, double.PositiveInfinity) ?? false;
+            return ParseRange(input.Replace(regexNonNumeric.Match(input).Value, "-"), out start, out end, min, max) ?? false;
+        }
+        public static bool DetectParseBPM(string input, out double start, out double end)
+        {
+            return DetectParseBPM(input, out start, out end, double.NegativeInfinity, double.PositiveInfinity);
         }
         public static string CreateMD5(string input)
         {
@@ -388,6 +386,42 @@ namespace SearchPlusPlus
                 return false;
             }
             return true;
+        }
+        internal static bool TryParseCinemaJson(Album album)
+        {
+
+            string path = album.BasePath;
+            JObject items;
+            try
+            {
+                if (album.IsPackaged)
+                {
+                    using (ZipFile zipFile = ZipFile.Read(path))
+                    {
+                        items = zipFile["cinema.json"].OpenReader().JsonDeserialize<JObject>();
+                        if (!zipFile.ContainsEntry((string)items["file_name"]))
+                        {
+                            return false;
+                        }
+                    }
+                }
+                else
+                {
+                    items = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(Path.Combine(path, "cinema.json")));
+                    if (!File.Exists(Path.Combine(path, (string)items["file_name"])))
+                    {
+                        return false;
+                    }
+                }
+
+
+                return true;
+            }
+            catch (Exception)
+            {
+
+            }
+            return false;
         }
     }
 }
