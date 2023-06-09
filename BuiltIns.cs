@@ -13,9 +13,46 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using Assets.Scripts.PeroTools.Nice.Interface;
 
 namespace SearchPlusPlus
 {
+    public class Range
+    {
+        private double _start;
+        private double _end;
+
+        public double Start
+        {
+            get
+            {
+                return _start;
+            }
+        }
+        public double End
+        {
+            get
+            {
+                return _end;
+            }
+        }
+
+        public Range(double start, double end)
+        {
+            if (start > end)
+            {
+                throw new ArgumentException($"Min value ({start}) must be less than or equal to max value ({end})!");
+            };
+            _start = start;
+            _end = end;
+
+        }
+        public Range(double value)
+        {
+            _start = _end = value;
+        }
+    }
     internal static class BuiltIns
     {
         internal const string runtimeParserText = "[Runtime parser] ";
@@ -294,7 +331,7 @@ namespace SearchPlusPlus
             return AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Values.Any(x => isHeadquarters.Contains(x));
         }
 
-        internal static Dictionary<string, ValueRange<double>> bpmDict = new Dictionary<string, ValueRange<double>>();
+        internal static ConcurrentDictionary<string, Range> bpmDict = new ConcurrentDictionary<string, Range>();
         internal static SearchResponse EvalBPM(MusicInfo musicInfo, string value)
         {
             if (value == null)
@@ -308,11 +345,15 @@ namespace SearchPlusPlus
             }
             value = value.Trim(' ');
             var bpmInfo = bpmDict[musicInfo.uid];
-            if (value == "?")
+            if (bpmInfo == null)
             {
-                return bpmInfo is null ? SearchResponse.PassedTest : SearchResponse.FailedTest;
+                if (value == "?")
+                {
+                    return SearchResponse.PassedTest;
+                }
+                return SearchResponse.FailedTest;
             }
-            if (bpmInfo is null)
+            if (value == "?")
             {
                 return SearchResponse.FailedTest;
             }
@@ -320,7 +361,7 @@ namespace SearchPlusPlus
             {
                 return new SearchResponse($"search error: failed to evaluate range \"{value}\"", -1);
             }
-            if (bpmStart <= bpmInfo.MinValue && bpmInfo.MaxValue <= bpmEnd)
+            if (bpmStart <= bpmInfo.Start && bpmInfo.End <= bpmEnd)
             {
                 return SearchResponse.PassedTest;
             }
@@ -328,9 +369,10 @@ namespace SearchPlusPlus
         }
         internal static void AddBPMInfo(MusicInfo musicInfo)
         {
-            if (!Utils.DetectParseBPM(musicInfo.bpm, out var start, out var end))
+            if (Utils.DetectParseBPM(musicInfo.bpm, out var start, out var end))
             {
-                bpmDict[musicInfo.uid] = new ValueRange<double>(start, end);
+                bpmDict[musicInfo.uid] = new Range(start, end);
+                return;
             }
             bpmDict[musicInfo.uid] = null;
         }

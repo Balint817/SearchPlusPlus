@@ -209,13 +209,17 @@ namespace SearchPlusPlus
             return stream;
         }
 
-        internal static readonly Regex regexBPM = new Regex(@"^[0-9]*\.[0-9]+[^0-9.][0-9]*\.[0-9]+$");
+        internal static readonly Regex regexBPM = new Regex(@"^[0-9,]*\.?[0-9,]+[^0-9.,][0-9,]*\.?[0-9,]+$");
 
-        internal static readonly Regex regexNonNumeric = new Regex(@"[^0-9.]");
+        internal static readonly Regex regexNonNumeric = new Regex(@"[^0-9.,]");
         public static bool DetectParseBPM(string input, out double start, out double end, double min, double max)
         {
             start = end = double.NaN;
             input = input.Trim();
+            if (ParseRange(input, out start, out end, min, max) ?? false)
+            {
+                return true;
+            }
             if (!regexBPM.IsMatch(input))
             {
                 return false;
