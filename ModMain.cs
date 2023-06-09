@@ -98,6 +98,7 @@ namespace SearchPlusPlus
 
             MelonLogger.Msg("Loading search tags...");
             string response = null;
+            var responseIdx = -1;
             try
             {
                 response = Utils.GetRequestString(BuiltIns.advancedJsonUrl);
@@ -106,16 +107,27 @@ namespace SearchPlusPlus
                 var result = new Dictionary<string, string[]>();
                 foreach (var chart in json["album"].ToObject<Dictionary<string, Dictionary<string, JValue>>>())
                 {
+                    responseIdx++;
                     string uid = chart.Key;
                     Dictionary<string, JValue> chartData = chart.Value;
-                    var tags = new List<string>()
+                    var tags = new List<string>();
+                    if (chartData.TryGetValue("name", out var value))
                     {
-                        chartData["name"].ToObject<string>(),
-                        chartData["author"].ToObject<string>(),
-                        chartData["design"].ToObject<string>()
-                    };
-                    tags.Append(string.Join("\0", tags));
-                    result[uid] = tags.ToArray();
+                        tags.Add(value.ToObject<string>());
+                    }
+                    if (chartData.TryGetValue("author", out value))
+                    {
+                        tags.Add(value.ToObject<string>());
+                    }
+                    if (chartData.TryGetValue("design", out value))
+                    {
+                        tags.Add(value.ToObject<string>());
+                    }
+                    if (tags.Any())
+                    {
+                        tags.Append(string.Join("\0", tags));
+                        result[uid] = tags.ToArray();
+                    }
                 }
                 BuiltIns.searchTags = result;
 
@@ -123,14 +135,14 @@ namespace SearchPlusPlus
             catch (Exception ex)
             {
                 MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
-                MelonLogger.Msg(ConsoleColor.Red, response);
+                MelonLogger.Msg(ConsoleColor.Red, $"position: {responseIdx}");
                 MelonLogger.Msg(ConsoleColor.Yellow, "Failed to load search tags, using default tags");
             }
 
             try
             {
                 MelonLogger.Msg("Checking charts for cinemas, this shouldn't take long...");
-                BuiltIns.hasCinema = AlbumManager.LoadedAlbumsByUid.Where(x => TryParseCinemaJson(x.Value)).Select(x => x.Key).ToHashSet();
+                BuiltIns.hasCinema = AlbumManager.LoadedAlbumsByUid.Where(x => Utils.TryParseCinemaJson(x.Value)).Select(x => x.Key).ToHashSet();
                 MelonLogger.Msg("Cinema tag initialized");
             }
             catch (Exception ex)
@@ -139,6 +151,7 @@ namespace SearchPlusPlus
                 MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
                 MelonLogger.Msg(ConsoleColor.Yellow, "If you're seeing this, then I have absolutely 0 clue how. Either way, the cinema tag won't work. (e.g. please report lmao)");
             }
+            BuiltIns.lastChecked = DateTime.UtcNow;
 
             LoadHQ();
 
@@ -263,7 +276,7 @@ namespace SearchPlusPlus
                     if (term.Key == "def" && !RecursionEnabled)
                     {
                         MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{tagName}ß");
-                        MelonLogger.Msg(ConsoleColor.Red, "input error: the \"def\" tag is not allowed in this context");
+                        MelonLogger.Msg(ConsoleColor.Red, "search error: the \"def\" tag is not allowed in this context");
                         return false;
                     }
                 }
@@ -285,42 +298,7 @@ namespace SearchPlusPlus
             }
         }
 
-        internal static bool TryParseCinemaJson(Album album)
-        {
-            
-            string path = album.BasePath;
-            JObject items;
-            try
-            {
-                if (album.IsPackaged)
-                {
-                    using (ZipFile zipFile = ZipFile.Read(path))
-                    {
-                        items = zipFile["cinema.json"].OpenReader().JsonDeserialize<JObject>();
-                        if (!zipFile.ContainsEntry((string)items["file_name"]))
-                        {
-                            return false;
-                        }
-                    }
-                }
-                else
-                {
-                    items = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(Path.Combine(path, "cinema.json")));
-                    if (!File.Exists(Path.Combine(path, (string)items["file_name"])))
-                    {
-                        return false;
-                    }
-                }
-
-
-                return true;
-            }
-            catch (Exception)
-            {
-
-            }
-            return false;
-        }
+        
 
     }
 }

@@ -170,6 +170,10 @@ public static class SearchParser
             var groupResult = false;
             foreach (var term in termGroup)
             {
+                if (!IsKeyRegistered(term.Key))
+                {
+                    return new SearchResponse($"search error: received unknown key \"{term.Key}\"", -1, groupIdx);
+                }
                 if (!ModMain.RecursionEnabled && term.Key == "def")
                 {
                     return new SearchResponse("search error: the \"def\" tag is not allowed in this context", -1, groupIdx);
