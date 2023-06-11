@@ -608,6 +608,46 @@ namespace SearchPlusPlus
             }
             return true;
         }
+
+        internal static bool EvalRecent(MusicInfo musicInfo)
+        {
+            if (!AlbumManager.LoadedAlbumsByUid.TryGetValue(musicInfo.uid, out var album))
+            {
+                return false;
+            }
+            return File.GetLastWriteTimeUtc(album.BasePath) >= ModMain.RecentDateLimit;
+        }
+        internal static SearchResponse EvalRecent(MusicInfo musicInfo, string value)
+        {
+            if (!int.TryParse(value, out var top))
+            {
+                return new SearchResponse("failed to parse value for 'recent'", -1);
+            };
+            if (sortedByLastModified == null)
+            {
+                sortedByLastModified = AlbumManager.LoadedAlbumsByUid.OrderByDescending(x => File.GetLastWriteTimeUtc(x.Value.BasePath)).Select(x => x.Key).ToList();
+            }
+            var idx = sortedByLastModified.IndexOf(musicInfo.uid);
+            if (idx == -1 || idx >= top)
+            {
+                return SearchResponse.FailedTest;
+            }
+            return SearchResponse.PassedTest;
+        }
+        internal static SearchResponse EvalAlbum(MusicInfo musicInfo, string value)
+        {
+            if (value == null)
+            {
+                return new SearchResponse("received null value in 'album'", -1);
+            }
+            if (!albumNames.TryGetValue(musicInfo.m_MusicExInfo.m_AlbumUidIndex, out var albumName))
+            {
+                return SearchResponse.FailedTest;
+            }
+            return albumName.LowerContains(value)
+                ? SearchResponse.PassedTest
+                : SearchResponse.FailedTest;
+        }
         public static SearchResponse Term_Diff(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
         {
             return EvalDiff(musicInfo, valueOverride ?? value, 0);
@@ -725,9 +765,43 @@ namespace SearchPlusPlus
             }
             return result;
         }
+        public static SearchResponse Term_History(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            return RefreshPatch.history.Contains(musicInfo.uid)
+                ? SearchResponse.PassedTest
+                : SearchResponse.FailedTest;
+        }
+
+        internal static List<string> sortedByLastModified;
+        public static SearchResponse Term_Recent(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            value = valueOverride ?? value;
+            if (value == null)
+            {
+                return EvalRecent(musicInfo)
+                ? SearchResponse.PassedTest
+                : SearchResponse.FailedTest;
+            }
+            return EvalRecent(musicInfo, value);
+            
+        }
+
+        internal static Dictionary<int, string> albumNames;
+        public static SearchResponse Term_Album(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            return EvalAlbum(musicInfo, valueOverride ?? value);
+        }
         public static SearchResponse Term_Callback(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
         {
             return EvalCallback(musicInfo, valueOverride ?? value, 0);
+        }
+
+        internal static List<string> newMusicUids;
+        public static SearchResponse Term_New(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            return newMusicUids.Contains(musicInfo.uid)
+                ? SearchResponse.PassedTest
+                : SearchResponse.FailedTest;
         }
 
 

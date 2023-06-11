@@ -21,7 +21,6 @@ namespace SearchPlusPlus
     [HarmonyLib.HarmonyPatch(typeof(SearchResults), "PeroLevelDesigner")]
     internal static class SearchPatch
     {
-        internal const string startString = "search:";
         // 0: must NOT have a value field
 
         // 1: range type

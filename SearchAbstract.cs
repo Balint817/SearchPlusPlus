@@ -99,7 +99,7 @@ public class SearchResponse
 }
 
 public delegate SearchResponse SearchEvaluator(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null);
-public delegate string SearchTransformer(MusicInfo musicInfo, string key, string value, string valueOverride = null);
+public delegate string SearchTransformer(MusicInfo musicInfo, int localIndex, string key, string value, string valueOverride = null);
 public static class SearchParser
 {
 
@@ -185,7 +185,7 @@ public static class SearchParser
         return true;
     }
 
-    public static string IllegalChars = "\\\": |-";
+    public const string IllegalChars = "\\\": |-";
 
     private static List<string> Aliases = new List<string>();
     public static void RegisterKey(string key, SearchEvaluator function, bool forceDuplicate = false)
@@ -309,13 +309,6 @@ public static class SearchParser
                     stringEnd = false;
                     orTagEnd = true;
                     key = key.ToLower();
-                    //if (!IsKeyRegistered(key))
-                    //{
-                    //    return new List<List<SearchTerm>>() {
-                    //        new List<SearchTerm>() {
-                    //            new SearchTerm(
-                    //                new SearchResponse($"received unknown key \"{key}\"", -2)) } };
-                    //}
                     if (isValue)
                     {
                         if (value == null)
@@ -362,13 +355,6 @@ public static class SearchParser
                     orTagEnd = false;
                     stringEnd = false;
                     key = key.ToLower();
-                    //if (!IsKeyRegistered(key))
-                    //{
-                    //    return new List<List<SearchTerm>>() {
-                    //        new List<SearchTerm>() {
-                    //            new SearchTerm(
-                    //                new SearchResponse($"received unknown key \"{key}\"", -2)) } };
-                    //}
                     if (isValue)
                     {
                         if (value == null)

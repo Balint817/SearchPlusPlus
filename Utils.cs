@@ -76,6 +76,19 @@ namespace SearchPlusPlus
             return dict;
         }
 
+        public static List<T> ToSystem<T>(this IList<T> cpList)
+        {
+            if (cpList == null)
+            {
+                return null;
+            }
+            var list = new List<T>();
+            foreach (var item in cpList)
+            {
+                list.Add(item);
+            }
+            return list;
+        }
         public static List<T> ToSystem<T>(this Il2CppSystem.Collections.Generic.List<T> cpList)
         {
             if (cpList == null)
@@ -251,12 +264,16 @@ namespace SearchPlusPlus
         }
         internal static bool LowerContains(this PeroString peroString, string compareText, string containsText)
         {
-            compareText = compareText ?? "";
-            containsText = containsText ?? "";
+            compareText = (compareText ?? "").ToLower();
+            containsText = (containsText ?? "").ToLower();
             peroString.Clear();
-            peroString.Append(compareText.ToLower());
+            peroString.Append(compareText);
             peroString.ToLower();
-            return (peroString.Contains(containsText) || compareText.ToLower().Contains(containsText));
+            return (peroString.Contains(containsText) || compareText.Contains(containsText));
+        }
+        internal static bool LowerContains(this string compareText, string containsText)
+        {
+            return (compareText ?? "").ToLower().Contains((containsText ?? "").ToLower());
         }
 
         public static readonly char[] splitChars = new char[] { '-' };

@@ -11,6 +11,9 @@ using System.Net;
 using System.Text;
 using Assets.Scripts.Database;
 using PeroPeroGames;
+using Assets.Scripts.PeroTools.Commons;
+using Assets.Scripts.PeroTools.Managers;
+using PeroPeroGames.GlobalDefines;
 
 namespace SearchPlusPlus
 {
@@ -37,11 +40,33 @@ namespace SearchPlusPlus
             }
         }
 
+        internal static int RecentDayLimit
+        {
+            get
+            {
+                return recentDayCountEntry.Value;
+            }
+        }
+
+        internal static string startString
+        {
+            get
+            {
+                return startSearchStringEntry?.Value;
+            }
+        }
+
+        internal static DateTime RecentDateLimit;
+
         internal static Dictionary<string, List<List<SearchTerm>>> customTags = new Dictionary<string, List<List<SearchTerm>>>();
 
         internal static MelonPreferences_Entry<bool> forceErrorCheckToggle;
 
         internal static MelonPreferences_Entry<bool> recursionToggle;
+
+        internal static MelonPreferences_Entry<int> recentDayCountEntry;
+
+        internal static MelonPreferences_Entry<string> startSearchStringEntry;
 
         internal static MelonPreferences_Entry<Dictionary<string, string>> customTagsEntry;
 
@@ -58,6 +83,7 @@ namespace SearchPlusPlus
             {
                 return;
             }
+            RecentDateLimit = DateTime.UtcNow - new TimeSpan(RecentDayLimit, 0, 0, 0);
             MelonLogger.Msg(ConsoleColor.Magenta, "Re-loading custom tags...");
             LoadCustomTags();
             MelonLogger.Msg(ConsoleColor.Magenta, "Re-loading aliases...");
@@ -74,6 +100,7 @@ namespace SearchPlusPlus
             MelonLogger.Msg("Registering builtins...");
 
             SearchParser.RegisterKey("acc", BuiltIns.Term_Acc);
+            SearchParser.RegisterKey("album", BuiltIns.Term_Album);
             SearchParser.RegisterKey("any", BuiltIns.Term_Any);
             SearchParser.RegisterKey("anyx", BuiltIns.Term_AnyX);
             SearchParser.RegisterKey("author", BuiltIns.Term_Author);
@@ -88,15 +115,19 @@ namespace SearchPlusPlus
             SearchParser.RegisterKey("eval", BuiltIns.Term_Eval);
             SearchParser.RegisterKey("fc", BuiltIns.Term_FC);
             SearchParser.RegisterKey("hidden", BuiltIns.Term_Hidden);
+            SearchParser.RegisterKey("history", BuiltIns.Term_History);
+            SearchParser.RegisterKey("new", BuiltIns.Term_New);
             SearchParser.RegisterKey("ranked", BuiltIns.Term_Ranked);
             SearchParser.RegisterKey("headquarters", BuiltIns.Term_Ranked, true);
+            SearchParser.RegisterKey("recent", BuiltIns.Term_Recent);
             SearchParser.RegisterKey("scene", BuiltIns.Term_Scene);
             SearchParser.RegisterKey("tag", BuiltIns.Term_Tag);
             SearchParser.RegisterKey("title", BuiltIns.Term_Title);
             SearchParser.RegisterKey("touhou", BuiltIns.Term_Touhou);
             SearchParser.RegisterKey("unplayed", BuiltIns.Term_Unplayed);
 
-
+            BuiltIns.albumNames = Singleton<ConfigManager>.instance.GetConfigObject<DBConfigAlbums>(0).list.ToSystem().ToDictionary(x => x.albumUidIndex, x => x.title);
+            BuiltIns.newMusicUids = DBMusicTagDefine.newMusicUids.ToSystem();
             MelonLogger.Msg("Loading search tags...");
             string response = null;
             var responseIdx = -1;
@@ -174,6 +205,13 @@ namespace SearchPlusPlus
             MelonLogger.Msg(Utils.Separator);
 
             MelonLogger.Msg("Recovering advanced search...");
+            
+            startSearchStringEntry = category.CreateEntry<string>("StartSearchText", "search:", "StartSearchText", "\nThe text that your search needs to start with in order for this mod to be enabled.\nMay be left empty if you want the mod to always use advanced search.\nFor obvious reasons, this is not a good idea.");
+
+            if (startSearchStringEntry.Value == null)
+            {
+                startSearchStringEntry.Value = startSearchStringEntry.DefaultValue;
+            }
 
             try
             {
@@ -187,10 +225,24 @@ namespace SearchPlusPlus
 
             forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", true, "ForceErrorChecks", "\nIf enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve search times.");
 
+            recentDayCountEntry = category.CreateEntry<int>("RecentDayLimit", 7, "RecentDayLimit", "\nThe amount of time, in days, that an album should be considered 'recent'.");
+
+            
+
+
+            RecentDateLimit = DateTime.UtcNow - new TimeSpan(RecentDayLimit, 0, 0, 0);
+
             if (category.HasEntry("HQSearchToggle"))
             {
                 category.DeleteEntry("HQSearchToggle");
             }
+
+
+            //Singleton<DBMusicTag>.instance.GetAlbumTagInfo(1).customInfo;
+
+            //Singleton<DBConfigALBUM>.instance;
+
+            //Singleton<DBConfigAlbums>.instance;
             MelonLogger.Msg("Hello World!");
         }
 
@@ -224,19 +276,26 @@ namespace SearchPlusPlus
                 }
             }
         }
-
         private void LoadCustomTags()
         {
             customTags.Clear();
-            const string filterKey = "| :\\\"";
             foreach (var item in customTagsEntry.Value)
             {
                 MelonLogger.Msg(Utils.Separator);
-                var firstMatch = item.Key.FirstOrDefault(x => filterKey.Contains(x));
+                var firstMatch = item.Key.FirstOrDefault(x => SearchParser.IllegalChars.Contains(x));
                 if (firstMatch != '\0')
                 {
                     MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
                     MelonLogger.Msg(ConsoleColor.Red, $"syntax error: key cannot contain ß{firstMatch}ß");
+                    continue;
+                }
+
+                var key = item.Key.ToLower();
+
+                if (customTags.ContainsKey(key))
+                {
+                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
+                    MelonLogger.Msg(ConsoleColor.Red, $"duplicate key \"{key}\"");
                     continue;
                 }
 
@@ -261,7 +320,7 @@ namespace SearchPlusPlus
                     continue;
                 }
 
-                customTags[item.Key.ToLower()] = result;
+                customTags[key] = result;
                 MelonLogger.Msg($"Parsed custom tag \"{item.Key}\": ß" + string.Join(" ", result.Select(x1 => string.Join("|", x1.Select(x2 => RefreshPatch.TermToString(x2))))) + 'ß');
             }
             MelonLogger.Msg(Utils.Separator);
