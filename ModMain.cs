@@ -213,6 +213,10 @@ namespace SearchPlusPlus
                 startSearchStringEntry.Value = startSearchStringEntry.DefaultValue;
             }
 
+            forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", true, "ForceErrorChecks", "\nIf enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve search times.");
+
+            recentDayCountEntry = category.CreateEntry<int>("RecentDayLimit", 7, "RecentDayLimit", "\nThe amount of time, in days, that an album should be considered 'recent'.");
+
             try
             {
                 RefreshPatch.Prefix();
@@ -222,10 +226,6 @@ namespace SearchPlusPlus
                 MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
                 MelonLogger.Msg(ConsoleColor.DarkRed, "Failed to recover advanced search results. This is a critical error, the mod will NOT work.");
             }
-
-            forceErrorCheckToggle = category.CreateEntry<bool>("ForceErrorChecks", true, "ForceErrorChecks", "\nIf enabled, searches with an error are forced to be empty. (So that it's obvious you messed up)\nAlways check the console for errors if you disable this tag.\nDisabling it should slightly improve search times.");
-
-            recentDayCountEntry = category.CreateEntry<int>("RecentDayLimit", 7, "RecentDayLimit", "\nThe amount of time, in days, that an album should be considered 'recent'.");
 
             
 
@@ -285,8 +285,8 @@ namespace SearchPlusPlus
                 var firstMatch = item.Key.FirstOrDefault(x => SearchParser.IllegalChars.Contains(x));
                 if (firstMatch != '\0')
                 {
-                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
-                    MelonLogger.Msg(ConsoleColor.Red, $"syntax error: key cannot contain ß{firstMatch}ß");
+                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ${item.Key}$");
+                    MelonLogger.Msg(ConsoleColor.Red, $"syntax error: key cannot contain ${firstMatch}$");
                     continue;
                 }
 
@@ -294,7 +294,7 @@ namespace SearchPlusPlus
 
                 if (customTags.ContainsKey(key))
                 {
-                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
+                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ${item.Key}$");
                     MelonLogger.Msg(ConsoleColor.Red, $"duplicate key \"{key}\"");
                     continue;
                 }
@@ -306,7 +306,7 @@ namespace SearchPlusPlus
                 var getError = SearchParser.GetSearchError(result);
                 if (getError != null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{item.Key}ß");
+                    MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ${item.Key}$");
                     MelonLogger.Msg(ConsoleColor.Red, getError.Message);
                     if (getError.Suggestion != null)
                     {
@@ -321,7 +321,7 @@ namespace SearchPlusPlus
                 }
 
                 customTags[key] = result;
-                MelonLogger.Msg($"Parsed custom tag \"{item.Key}\": ß" + string.Join(" ", result.Select(x1 => string.Join("|", x1.Select(x2 => RefreshPatch.TermToString(x2))))) + 'ß');
+                MelonLogger.Msg($"Parsed custom tag \"{item.Key}\": $" + string.Join(" ", result.Select(x1 => string.Join("|", x1.Select(x2 => RefreshPatch.TermToString(x2))))) + '$');
             }
             MelonLogger.Msg(Utils.Separator);
             MelonLogger.Msg($"Loaded {customTags.Count} custom tags");
@@ -335,7 +335,7 @@ namespace SearchPlusPlus
                 {
                     if (term.Key == "def" && !RecursionEnabled)
                     {
-                        MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ß{tagName}ß");
+                        MelonLogger.Msg(ConsoleColor.Yellow, $"Failed to load custom tag: ${tagName}$");
                         MelonLogger.Msg(ConsoleColor.Red, "search error: the \"def\" tag is not allowed in this context");
                         return false;
                     }

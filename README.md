@@ -7,7 +7,8 @@ An overly-complicated search engine mod for Muse Dash.
 **First things first, I recommend saving a bunch of filters you wrote beforehand, and copy-pasting them into the game as needed, cause typing these each time is annoying.\
 Alternatively, check out the `Custom tags` section.**
 
-All advanced searches made using this mod must be preceded by `search:`
+All advanced searches made using this mod must be preceded by a start text, which is changeable in the config.
+The default value is `search:`.
 
 **If you've ever written a single line of code (or used any \*\*\*tai site before lol), you can probably skip most of this guide**
 

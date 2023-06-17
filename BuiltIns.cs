@@ -531,7 +531,7 @@ namespace SearchPlusPlus
             }
             else
             {
-                return new SearchResponse($"search error: how the fuck? (evalAcc, ß{value}ß)", -1);
+                return new SearchResponse($"search error: how the fuck? (evalAcc, ${value}$)", -1);
             }
 
             if (availableMaps.Count == 0)
@@ -803,7 +803,6 @@ namespace SearchPlusPlus
                 ? SearchResponse.PassedTest
                 : SearchResponse.FailedTest;
         }
-
 
         internal static Dictionary<string, string[]> searchTags = new Dictionary<string, string[]>
         {
