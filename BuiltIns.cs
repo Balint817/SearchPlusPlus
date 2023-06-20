@@ -214,30 +214,19 @@ namespace SearchPlusPlus
 
             Utils.GetAvailableMaps(musicInfo, out var availableMaps);
 
-            var debug = musicInfo.uid == "999-46";
-
             foreach (int i in TermDiffTypes[type].Intersect(availableMaps))
             {
                 var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
-                if (debug)
-                {
-                    MelonLogger.Msg(ConsoleColor.DarkCyan, $"diffIdx: {i}");
-                    MelonLogger.Msg(ConsoleColor.DarkCyan, $"diffStr: {musicDiff}");
-                }
                 if (!int.TryParse(musicDiff, out int x))
                 {
-                    MelonLogger.Msg(ConsoleColor.DarkCyan, "entered ?");
                     if (diffIncludeString)
                     {
-                        MelonLogger.Msg(ConsoleColor.DarkCyan, "passed ?");
                         return SearchResponse.PassedTest;
                     };
 
-                    MelonLogger.Msg(ConsoleColor.DarkCyan, "failed ?");
                 }
                 else if (range.Contains(x))
                 {
-                    MelonLogger.Msg(ConsoleColor.DarkCyan, $"passed range {x}");
                     return SearchResponse.PassedTest;
                 }
             }
