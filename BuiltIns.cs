@@ -15,42 +15,76 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using Assets.Scripts.PeroTools.Nice.Interface;
+using PeroPeroGames.GlobalDefines;
 
 namespace SearchPlusPlus
 {
     public class Range
     {
-        private double _start;
-        private double _end;
-
-        public double Start
-        {
-            get
-            {
-                return _start;
-            }
-        }
-        public double End
-        {
-            get
-            {
-                return _end;
-            }
-        }
-
+        public static Range Infinity = new Range(double.NegativeInfinity, double.PositiveInfinity);
+        public double Start;
+        public double End;
         public Range(double start, double end)
         {
             if (start > end)
             {
                 throw new ArgumentException($"Min value ({start}) must be less than or equal to max value ({end})!");
             };
-            _start = start;
-            _end = end;
+            Start = start;
+            End = end;
 
         }
         public Range(double value)
         {
-            _start = _end = value;
+            Start = End = value;
+        }
+
+        public bool Contains(double value)
+        {
+            return Start <= value && value <= End;
+        }
+
+        public bool IsOverlap(Range range)
+        {
+            if (End < range.Start)
+            {
+                return false;
+            }
+            if (Start > range.End)
+            {
+                return false;
+            }
+
+            return true;
+        }
+        public bool TryGetOverlap(Range range, out Range overlap)
+        {
+            overlap = null;
+            if (End < range.Start)
+            {
+                return false;
+            }
+            if (Start > range.End)
+            {
+                return false;
+            }
+            overlap = new Range(Math.Max(range.Start, Start), Math.Min(range.End, End));
+            return true;
+        }
+
+        public bool TryMerge(Range range, out Range merge)
+        {
+            merge = null;
+            if (End < range.Start-1)
+            {
+                return false;
+            }
+            if (Start > range.End+1)
+            {
+                return false;
+            }
+            merge = new Range(Math.Min(range.Start, Start), Math.Max(range.End, End));
+            return true;
         }
     }
     internal static class BuiltIns
@@ -123,15 +157,14 @@ namespace SearchPlusPlus
                 return new SearchResponse($"input error: received null or empty value in 'diff'",-1);
             }
             bool diffIncludeString = false;
-            double rangeStart = 0;
-            double rangeEnd = 0;
+            var range = Range.Infinity;
 
             value = value.Trim(' ');
             if (value == "?")
             {
                 diffIncludeString = true;
             }
-            else if (!Utils.ParseRange(value, out rangeStart, out rangeEnd))
+            else if (!Utils.ParseRange(value, out range))
             {
                 return new SearchResponse($"search error: failed to evaluate range \"{value}\"", -1);
             }
@@ -149,7 +182,7 @@ namespace SearchPlusPlus
                         return SearchResponse.PassedTest;
                     };
                 }
-                else if (rangeStart <= x && x <= rangeEnd)
+                else if (range.Contains(x))
                 {
                     return SearchResponse.PassedTest;
                 }
@@ -162,11 +195,9 @@ namespace SearchPlusPlus
             {
                 return new SearchResponse($"input error: received null value in 'callback'", -1);
             }
-            double rangeStart = 0;
-            double rangeEnd = 0;
 
             value = value.Trim(' ');
-            if (!Utils.ParseRange(value, out rangeStart, out rangeEnd))
+            if (!Utils.ParseRange(value, out var range))
             {
                 return new SearchResponse($"search error: failed to evaluate range \"{value}\"", -1);
             }
@@ -177,7 +208,7 @@ namespace SearchPlusPlus
             foreach (int i in availableMaps)
             {
                 var x = musicInfo.GetCallBackMusicLevelIntByDiff(i, false);
-                if (rangeStart <= x && x <= rangeEnd)
+                if (range.Contains(x))
                 {
                     return SearchResponse.PassedTest;
                 }
@@ -295,7 +326,7 @@ namespace SearchPlusPlus
             value = value.Trim(' ');
             if (value != "?")
             {
-                var result = Utils.ParseRange(value, out var start, out var end, 1, 5);
+                var result = Utils.ParseRange(value, out var range, 1, 5);
                 if (result == null)
                 {
                     return new SearchResponse($"search error: failed to parse range \"{value}\"", -1);
@@ -304,7 +335,7 @@ namespace SearchPlusPlus
                 {
                     return new SearchResponse($"search error: \"{value}\" isn't within the acceptable range of values", -1);
                 }
-                var t = availableMaps.Where((int x) => (start <= x && x <= end));
+                var t = availableMaps.Where((int x) => range.Contains(x));
                 if (!t.Any())
                 {
                     return SearchResponse.FailedTest;
@@ -358,11 +389,11 @@ namespace SearchPlusPlus
             {
                 return SearchResponse.FailedTest;
             }
-            if (!Utils.ParseRange(value, out double bpmStart, out double bpmEnd))
+            if (!Utils.ParseRange(value, out var bpmRange))
             {
                 return new SearchResponse($"search error: failed to evaluate range \"{value}\"", -1);
             }
-            if (bpmStart <= bpmInfo.Start && bpmInfo.End <= bpmEnd)
+            if (bpmRange.IsOverlap(bpmInfo))
             {
                 return SearchResponse.PassedTest;
             }
@@ -370,9 +401,9 @@ namespace SearchPlusPlus
         }
         internal static void AddBPMInfo(MusicInfo musicInfo)
         {
-            if (Utils.DetectParseBPM(musicInfo.bpm, out var start, out var end))
+            if (Utils.DetectParseBPM(musicInfo.bpm, out var range))
             {
-                bpmDict[musicInfo.uid] = new Range(start, end);
+                bpmDict[musicInfo.uid] = range;
                 return;
             }
             bpmDict[musicInfo.uid] = null;
@@ -475,14 +506,12 @@ namespace SearchPlusPlus
                 return SearchResponse.FailedTest;
             }
             var splitValue = value.Trim(' ').Split(' ').Where(x => x != "").ToArray();
-            double diffStart = 1;
-            double diffEnd = 5;
-            double accStart = 0;
-            double accEnd = 1;
+            Range diffRange;
+            Range accRange;
             if (splitValue.Length == 1)
             {
                 value = splitValue[0];
-                var result = Utils.ParseRange(value, out accStart, out accEnd, 0, 100);
+                var result = Utils.ParseRange(value, out accRange, 0, 100);
                 if (result == null)
                 {
                     return new SearchResponse($"search error: failed to parse range \"{value}\"", -1);
@@ -491,12 +520,12 @@ namespace SearchPlusPlus
                 {
                     return new SearchResponse($"search error: \"{value}\" isn't within the acceptable range of values", -1);
                 }
-                accStart /= 100;
-                accEnd /= 100;
+                accRange.Start /= 100;
+                accRange.End /= 100;
             }
             else if (splitValue.Length == 2)
             {
-                var result = Utils.ParseRange(splitValue[0], out accStart, out accEnd, 0, 100);
+                var result = Utils.ParseRange(splitValue[0], out accRange, 0, 100);
                 if (result == null)
                 {
                     if (splitValue[0] == "?")
@@ -509,9 +538,9 @@ namespace SearchPlusPlus
                 {
                     return new SearchResponse($"search error: \"{splitValue[0]}\" isn't within the acceptable range of values", -1);
                 }
-                accStart /= 100;
-                accEnd /= 100;
-                result = Utils.ParseRange(splitValue[1], out diffStart, out diffEnd, 1, 5);
+                accRange.Start /= 100;
+                accRange.End /= 100;
+                result = Utils.ParseRange(splitValue[1], out diffRange, 1, 5);
                 if (result == null)
                 {
                     if (splitValue[1] != "?")
@@ -526,7 +555,7 @@ namespace SearchPlusPlus
                 }
                 else
                 {
-                    availableMaps = availableMaps.Where(x => diffStart <= x && x <= diffEnd).ToHashSet();
+                    availableMaps = availableMaps.Where(x => diffRange.Contains(x)).ToHashSet();
                 }
             }
             else
@@ -542,7 +571,7 @@ namespace SearchPlusPlus
             foreach (var diff in availableMaps)
             {
                 string s = musicInfo.uid + "_" + diff;
-                if (!RefreshPatch.highScores.Any(x => (string)x["uid"] == s && accStart <= (float)x["accuracy"] && (float)x["accuracy"] <= accEnd))
+                if (!RefreshPatch.highScores.Any(x => (string)x["uid"] == s && accRange.Contains((float)x["accuracy"])))
                 {
                     return SearchResponse.FailedTest;
                 };
@@ -566,7 +595,7 @@ namespace SearchPlusPlus
                     ? SearchResponse.PassedTest
                     : SearchResponse.FailedTest;
             }
-            var result = Utils.ParseRange(value, out var start, out var end, 1, 5);
+            var result = Utils.ParseRange(value, out var range, 1, 5);
             if (result == null)
             {
                 return new SearchResponse($"search error: failed to parse range \"{value}\"", -1);
@@ -575,7 +604,7 @@ namespace SearchPlusPlus
             {
                 return new SearchResponse($"search error: \"{value}\" isn't within the acceptable range of values", -1);
             }
-            availableMaps = availableMaps.Where(x => start <= x && x <= end).ToHashSet();
+            availableMaps = availableMaps.Where(x => range.Contains(x)).ToHashSet();
             if (!availableMaps.Any())
             {
                 return SearchResponse.FailedTest;
@@ -619,16 +648,16 @@ namespace SearchPlusPlus
         }
         internal static SearchResponse EvalRecent(MusicInfo musicInfo, string value)
         {
-            if (!int.TryParse(value, out var top))
+            if (!Utils.ParseRange(value, out var range))
             {
-                return new SearchResponse("failed to parse value for 'recent'", -1);
-            };
+                return new SearchResponse("failed to parse range for 'recent'", -1);
+            }
             if (sortedByLastModified == null)
             {
                 sortedByLastModified = AlbumManager.LoadedAlbumsByUid.OrderByDescending(x => File.GetLastWriteTimeUtc(x.Value.BasePath)).Select(x => x.Key).ToList();
             }
             var idx = sortedByLastModified.IndexOf(musicInfo.uid);
-            if (idx == -1 || idx >= top)
+            if (idx == -1 || !range.Contains(idx))
             {
                 return SearchResponse.FailedTest;
             }
@@ -795,11 +824,9 @@ namespace SearchPlusPlus
         {
             return EvalCallback(musicInfo, valueOverride ?? value, 0);
         }
-
-        internal static List<string> newMusicUids;
         public static SearchResponse Term_New(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
         {
-            return newMusicUids.Contains(musicInfo.uid)
+            return DBMusicTagDefine.newMusicUids.Contains(musicInfo.uid)
                 ? SearchResponse.PassedTest
                 : SearchResponse.FailedTest;
         }

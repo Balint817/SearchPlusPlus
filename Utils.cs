@@ -225,11 +225,10 @@ namespace SearchPlusPlus
         internal static readonly Regex regexBPM = new Regex(@"^[0-9,]*\.?[0-9,]+[^0-9.,][0-9,]*\.?[0-9,]+$");
 
         internal static readonly Regex regexNonNumeric = new Regex(@"[^0-9.,]");
-        public static bool DetectParseBPM(string input, out double start, out double end, double min, double max)
+        public static bool DetectParseBPM(string input, out Range range, double min, double max)
         {
-            start = end = double.NaN;
             input = input.Trim();
-            if (ParseRange(input, out start, out end, min, max) ?? false)
+            if (ParseRange(input, out range, min, max) ?? false)
             {
                 return true;
             }
@@ -237,11 +236,11 @@ namespace SearchPlusPlus
             {
                 return false;
             }
-            return ParseRange(input.Replace(regexNonNumeric.Match(input).Value, "-"), out start, out end, min, max) ?? false;
+            return ParseRange(input.Replace(regexNonNumeric.Match(input).Value, "-"), out range, min, max) ?? false;
         }
-        public static bool DetectParseBPM(string input, out double start, out double end)
+        public static bool DetectParseBPM(string input, out Range range)
         {
-            return DetectParseBPM(input, out start, out end, double.NegativeInfinity, double.PositiveInfinity);
+            return DetectParseBPM(input, out range, double.NegativeInfinity, double.PositiveInfinity);
         }
         public static string CreateMD5(string input)
         {
@@ -277,14 +276,15 @@ namespace SearchPlusPlus
         }
 
         public static readonly char[] splitChars = new char[] { '-' };
-        public static bool ParseRange(string expression, out double start, out double end)
+        public static bool ParseRange(string expression, out Range range)
         {
-            return ParseRange(expression, out start, out end, double.NegativeInfinity, double.PositiveInfinity) ?? false;
+            return ParseRange(expression, out range, double.NegativeInfinity, double.PositiveInfinity) ?? false;
         }
-        public static bool? ParseRange(string expression, out double start, out double end, double min, double max)
+        public static bool? ParseRange(string expression, out Range range, double min, double max)
         {
-            start = double.NaN;
-            end = double.NaN;
+            var start = double.NaN;
+            var end = double.NaN;
+            range = null;
             if (string.IsNullOrEmpty(expression))
             {
                 return null;
@@ -375,6 +375,7 @@ namespace SearchPlusPlus
             {
                 return false;
             }
+            range = new Range(start, end);
             return true;
         }
 

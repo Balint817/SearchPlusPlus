@@ -127,7 +127,6 @@ namespace SearchPlusPlus
             SearchParser.RegisterKey("unplayed", BuiltIns.Term_Unplayed);
 
             BuiltIns.albumNames = Singleton<ConfigManager>.instance.GetConfigObject<DBConfigAlbums>(0).list.ToSystem().ToDictionary(x => x.albumUidIndex, x => x.title);
-            BuiltIns.newMusicUids = DBMusicTagDefine.newMusicUids.ToSystem();
             MelonLogger.Msg("Loading search tags...");
             string response = null;
             var responseIdx = -1;
