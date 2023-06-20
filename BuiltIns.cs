@@ -667,6 +667,31 @@ namespace SearchPlusPlus
             }
             return SearchResponse.PassedTest;
         }
+        internal static SearchResponse EvalOld(MusicInfo musicInfo, string value)
+        {
+            if (value == null)
+            {
+                return new SearchResponse("received null value in 'old'", -1);
+            }
+            bool isTop = int.TryParse(value, out int top);
+            Range range = null;
+
+            if (!isTop && !Utils.ParseRange(value, out range))
+            {
+                return new SearchResponse("failed to parse value for 'old'", -1);
+            }
+            if (sortedByLastModified == null)
+            {
+                sortedByLastModified = AlbumManager.LoadedAlbumsByUid.OrderByDescending(x => File.GetLastWriteTimeUtc(x.Value.BasePath)).Select(x => x.Key).ToList();
+            }
+            var idx = sortedByLastModified.IndexOf(musicInfo.uid);
+
+            if (idx == -1 || isTop ? (sortedByLastModified.Count-idx) > top : !range.Contains(sortedByLastModified.Count - idx))
+            {
+                return SearchResponse.FailedTest;
+            }
+            return SearchResponse.PassedTest;
+        }
         internal static SearchResponse EvalAlbum(MusicInfo musicInfo, string value)
         {
             if (value == null)
@@ -817,6 +842,35 @@ namespace SearchPlusPlus
             }
             return EvalRecent(musicInfo, value);
             
+        }
+
+        public static SearchResponse Term_Old(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            return EvalOld(musicInfo, valueOverride ?? value);
+        }
+        internal static Random randomGenerator = new Random();
+        public static SearchResponse Term_Random(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            value = valueOverride ?? value;
+            if (value == null)
+            {
+                return randomGenerator.Next(0, 2) == 1
+                    ? SearchResponse.PassedTest
+                    : SearchResponse.FailedTest;
+            }
+            if (!double.TryParse(value, out var n))
+            {
+                return new SearchResponse("failed to parse value for 'random'", -1);
+            }
+            if (n <= 1)
+            {
+                return new SearchResponse("value for 'random' may not be smaller than 1", -1);
+            }
+            var chance = 1 / n;
+
+            return randomGenerator.NextDouble() < chance
+                ? SearchResponse.PassedTest
+                : SearchResponse.FailedTest;
         }
 
         internal static Dictionary<int, string> albumNames;

@@ -117,6 +117,8 @@ namespace SearchPlusPlus
             SearchParser.RegisterKey("hidden", BuiltIns.Term_Hidden);
             SearchParser.RegisterKey("history", BuiltIns.Term_History);
             SearchParser.RegisterKey("new", BuiltIns.Term_New);
+            SearchParser.RegisterKey("old", BuiltIns.Term_Old);
+            SearchParser.RegisterKey("random", BuiltIns.Term_Random);
             SearchParser.RegisterKey("ranked", BuiltIns.Term_Ranked);
             SearchParser.RegisterKey("headquarters", BuiltIns.Term_Ranked, true);
             SearchParser.RegisterKey("recent", BuiltIns.Term_Recent);
