@@ -648,16 +648,20 @@ namespace SearchPlusPlus
         }
         internal static SearchResponse EvalRecent(MusicInfo musicInfo, string value)
         {
-            if (!Utils.ParseRange(value, out var range))
+            bool isTop = int.TryParse(value, out int top);
+            Range range = null;
+
+            if (!isTop && !Utils.ParseRange(value, out range))
             {
-                return new SearchResponse("failed to parse range for 'recent'", -1);
+                return new SearchResponse("failed to parse value for 'recent'", -1);
             }
             if (sortedByLastModified == null)
             {
                 sortedByLastModified = AlbumManager.LoadedAlbumsByUid.OrderByDescending(x => File.GetLastWriteTimeUtc(x.Value.BasePath)).Select(x => x.Key).ToList();
             }
             var idx = sortedByLastModified.IndexOf(musicInfo.uid);
-            if (idx == -1 || !range.Contains(idx))
+
+            if (idx == -1 || isTop ? idx >= top : !range.Contains(idx))
             {
                 return SearchResponse.FailedTest;
             }
