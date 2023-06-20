@@ -862,7 +862,7 @@ namespace SearchPlusPlus
             {
                 return new SearchResponse("failed to parse value for 'random'", -1);
             }
-            if (n <= 1)
+            if (n < 1)
             {
                 return new SearchResponse("value for 'random' may not be smaller than 1", -1);
             }
