@@ -21,25 +21,68 @@ namespace SearchPlusPlus
 {
     public class Range
     {
-        public static Range Infinity = new Range(double.NegativeInfinity, double.PositiveInfinity);
-        public double Start;
-        public double End;
+        public static readonly Range InvalidRange = new Range() { IsReadonly = true };
+        public double Start
+        {
+            get;
+            private set;
+        }
+        public double End
+        {
+            get;
+            private set;
+        }
+
+        public bool IsReadonly
+        {
+            get;
+            private set;
+        }
         public Range(double start, double end)
         {
+            if (double.IsNaN(start) ^ double.IsNaN(end))
+            {
+                throw new ArgumentException($"Either both or neither ends should be NaN.");
+            }
             if (start > end)
             {
                 throw new ArgumentException($"Min value ({start}) must be less than or equal to max value ({end})!");
             };
             Start = start;
             End = end;
-
         }
         public Range(double value)
         {
             Start = End = value;
         }
 
-        public bool Contains(double value)
+        public Range()
+        {
+            Start = End = double.NaN;
+        }
+
+        public void Update(double start, double end)
+        {
+            if (IsReadonly)
+            {
+                return;
+            }
+            if (start > end)
+            {
+                throw new ArgumentException($"Min value ({start}) must be less than or equal to max value ({end})!");
+            };
+            Start = start;
+            End = end;
+        }
+        public void Update(double value)
+        {
+            if (IsReadonly)
+            {
+                return;
+            }
+            Start = End = value;
+        }
+        public virtual bool Contains(double value)
         {
             return Start <= value && value <= End;
         }
@@ -157,7 +200,7 @@ namespace SearchPlusPlus
                 return new SearchResponse($"input error: received null or empty value in 'diff'",-1);
             }
             bool diffIncludeString = false;
-            var range = Range.Infinity;
+            var range = Range.InvalidRange;
 
             value = value.Trim(' ');
             if (value == "?")
@@ -171,19 +214,30 @@ namespace SearchPlusPlus
 
             Utils.GetAvailableMaps(musicInfo, out var availableMaps);
 
+            var debug = musicInfo.uid == "999-46";
 
             foreach (int i in TermDiffTypes[type].Intersect(availableMaps))
             {
                 var musicDiff = musicInfo.GetMusicLevelStringByDiff(i, false);
+                if (debug)
+                {
+                    MelonLogger.Msg(ConsoleColor.DarkCyan, $"diffIdx: {i}");
+                    MelonLogger.Msg(ConsoleColor.DarkCyan, $"diffStr: {musicDiff}");
+                }
                 if (!int.TryParse(musicDiff, out int x))
                 {
+                    MelonLogger.Msg(ConsoleColor.DarkCyan, "entered ?");
                     if (diffIncludeString)
                     {
+                        MelonLogger.Msg(ConsoleColor.DarkCyan, "passed ?");
                         return SearchResponse.PassedTest;
                     };
+
+                    MelonLogger.Msg(ConsoleColor.DarkCyan, "failed ?");
                 }
                 else if (range.Contains(x))
                 {
+                    MelonLogger.Msg(ConsoleColor.DarkCyan, $"passed range {x}");
                     return SearchResponse.PassedTest;
                 }
             }
@@ -520,8 +574,7 @@ namespace SearchPlusPlus
                 {
                     return new SearchResponse($"search error: \"{value}\" isn't within the acceptable range of values", -1);
                 }
-                accRange.Start /= 100;
-                accRange.End /= 100;
+                accRange.Update(accRange.Start/100, accRange.End/100);
             }
             else if (splitValue.Length == 2)
             {
@@ -538,8 +591,7 @@ namespace SearchPlusPlus
                 {
                     return new SearchResponse($"search error: \"{splitValue[0]}\" isn't within the acceptable range of values", -1);
                 }
-                accRange.Start /= 100;
-                accRange.End /= 100;
+                accRange.Update(accRange.Start / 100, accRange.End / 100);
                 result = Utils.ParseRange(splitValue[1], out diffRange, 1, 5);
                 if (result == null)
                 {

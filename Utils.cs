@@ -15,6 +15,7 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using Ionic.Zip;
+using MelonLoader;
 
 namespace SearchPlusPlus
 {
@@ -389,7 +390,11 @@ namespace SearchPlusPlus
             isCustom = BuiltIns.EvalCustom(musicInfo);
             if (isCustom)
             {
-                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => x.Key).ToHashSet();
+                if (musicInfo.uid == "999-46")
+                {
+                    MelonLogger.Msg(ConsoleColor.Cyan, string.Join("\n", AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Select(x => $"{x.Key} ({musicInfo.GetMusicLevelStringByDiff(x.Key, false)}): {x.Value ?? "null"}")));
+                }
+                availableMaps = AlbumManager.LoadedAlbumsByUid[musicInfo.uid].availableMaps.Where(x => !string.IsNullOrEmpty(x.Value)).Select(x => x.Key).ToHashSet();
             }
             else
             {
