@@ -21,6 +21,18 @@ namespace SearchPlusPlus
 {
     public static class Utils
     {
+        public static string FindKeyword
+        {
+            get
+            {
+                return GlobalDataBase.s_DbMusicTag.m_FindKeyword;
+            }
+            set
+            {
+                GlobalDataBase.s_DbMusicTag.m_FindKeyword = value;
+            }
+        }
+
         internal const string Separator = "--------------------------------";
 
         internal static readonly List<int> DifficultyResultAll = Enumerable.Range(1,5).ToList();
@@ -102,6 +114,16 @@ namespace SearchPlusPlus
                 list.Add(item);
             }
             return list;
+        }
+
+        public static Il2CppSystem.Collections.Generic.List<T> ToIL2CPP<T>(this IEnumerable<T> list)
+        {
+            var result = new Il2CppSystem.Collections.Generic.List<T>();
+            foreach (var item in list)
+            {
+                result.Add(item);
+            }
+            return result;
         }
 
         public static Dictionary<TKey, TValue> ToSystem<TKey, TValue>(this Il2CppSystem.Collections.Generic.Dictionary<TKey, TValue> cpDict)

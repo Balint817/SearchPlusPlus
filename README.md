@@ -38,7 +38,7 @@ Some tags may receive multiple ranges as input. (`key:"A-B C-D"`)
 	- (Callback difficulty does not appear visually in-game)
 	- (It is always a number)
 - `hidden`
-	- Check if song has hidden
+	- Check if the song has hidden
 - `hidden:range`
 	- Check for hidden in the given range
 	- Supports `?` => in case the difficulty isn't a number
@@ -66,6 +66,13 @@ Some tags may receive multiple ranges as input. (`key:"A-B C-D"`)
 	- The time can be changed in the config
 - `recent:value`
 	- returns the `x` most recent songs (given by value)
+- `recent:range`
+	- (where `range` is `A-B`)
+	- returns the most recent songs starting from the `A`-th most recent, ending with the `B-th` recent  (given by value)
+- `old:value`
+	- inverse of `recent:value`
+- `old:range`
+	- inverse of `recent:range`
 - `scene:string`
 	- Checks if the scene matches the filter, can be:
 		- a 1 digit number
@@ -102,6 +109,16 @@ Some tags may receive multiple ranges as input. (`key:"A-B C-D"`)
 - `acc:"range1 range2"`
 	- All difficulties of a song that are within `range2` that have an accuracy within `range1`
 	- `range2` supports `?` => selects highest difficulty
+- `random`
+	- 1/2 chance to pass.
+- `random:value`
+	- 1/value chance to pass, where value >= 1
+- `sort:string`
+	- Applies sorting to the search results.
+	- Built-in values are: "name", "uid", "diff", "acc"
+- `reverse_sort:string`
+	- Applies reversed sorting in comparison to `sort:string`
+	- Aliases: `reverse`, `reversesort`
 - `eval:string`
     - See the `Evaluate Tag` section
 - `def:string`

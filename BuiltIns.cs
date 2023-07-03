@@ -22,15 +22,38 @@ namespace SearchPlusPlus
     public class Range
     {
         public static readonly Range InvalidRange = new Range() { IsReadonly = true };
+
+        private double _start;
+        private double _end;
         public double Start
         {
-            get;
-            private set;
+            get
+            {
+                return _start;
+            }
+            set
+            {
+                if (value > _end)
+                {
+                    throw new ArgumentOutOfRangeException($"must be less than or equal to max value", nameof(value));
+                }
+                _start = value;
+            }
         }
         public double End
         {
-            get;
-            private set;
+            get
+            {
+                return _end;
+            }
+            set
+            {
+                if (value < _start)
+                {
+                    throw new ArgumentOutOfRangeException($"must be greater than or equal to min value", nameof(value));
+                }
+                _end = value;
+            }
         }
 
         public bool IsReadonly
@@ -46,19 +69,19 @@ namespace SearchPlusPlus
             }
             if (start > end)
             {
-                throw new ArgumentException($"Min value ({start}) must be less than or equal to max value ({end})!");
+                throw new ArgumentOutOfRangeException($"Min value ({start}) must be less than or equal to max value ({end})!");
             };
-            Start = start;
-            End = end;
+            _start = start;
+            _end = end;
         }
         public Range(double value)
         {
-            Start = End = value;
+            _start = _end = value;
         }
 
         public Range()
         {
-            Start = End = double.NaN;
+            _start = _end = double.NaN;
         }
 
         public void Update(double start, double end)
@@ -69,10 +92,10 @@ namespace SearchPlusPlus
             }
             if (start > end)
             {
-                throw new ArgumentException($"Min value ({start}) must be less than or equal to max value ({end})!");
+                throw new ArgumentOutOfRangeException($"Min value ({start}) must be less than or equal to max value ({end})!");
             };
-            Start = start;
-            End = end;
+            _start = start;
+            _end = end;
         }
         public void Update(double value)
         {
@@ -80,20 +103,20 @@ namespace SearchPlusPlus
             {
                 return;
             }
-            Start = End = value;
+            _start = _end = value;
         }
         public virtual bool Contains(double value)
         {
-            return Start <= value && value <= End;
+            return _start <= value && value <= _end;
         }
 
         public bool IsOverlap(Range range)
         {
-            if (End < range.Start)
+            if (_end < range._start)
             {
                 return false;
             }
-            if (Start > range.End)
+            if (Start > range._end)
             {
                 return false;
             }
@@ -103,30 +126,30 @@ namespace SearchPlusPlus
         public bool TryGetOverlap(Range range, out Range overlap)
         {
             overlap = null;
-            if (End < range.Start)
+            if (_end < range._start)
             {
                 return false;
             }
-            if (Start > range.End)
+            if (_start > range._end)
             {
                 return false;
             }
-            overlap = new Range(Math.Max(range.Start, Start), Math.Min(range.End, End));
+            overlap = new Range(Math.Max(range._start, _start), Math.Min(range._end, _end));
             return true;
         }
 
         public bool TryMerge(Range range, out Range merge)
         {
             merge = null;
-            if (End < range.Start-1)
+            if (_end < range._start - 1)
             {
                 return false;
             }
-            if (Start > range.End+1)
+            if (_start > range._end + 1)
             {
                 return false;
             }
-            merge = new Range(Math.Min(range.Start, Start), Math.Max(range.End, End));
+            merge = new Range(Math.Min(range._start, _start), Math.Max(range._end, _end));
             return true;
         }
     }
@@ -689,12 +712,41 @@ namespace SearchPlusPlus
         }
         internal static SearchResponse EvalRecent(MusicInfo musicInfo, string value)
         {
+            if (!AlbumManager.LoadedAlbumsByUid.ContainsKey(musicInfo.uid))
+            {
+                return SearchResponse.FailedTest;
+            }
             bool isTop = int.TryParse(value, out int top);
             Range range = null;
 
-            if (!isTop && !Utils.ParseRange(value, out range))
+            if (isTop)
             {
-                return new SearchResponse("failed to parse value for 'recent'", -1);
+                if (top < 1)
+                {
+                    return new SearchResponse("non-positive number is not valid for 'recent'", -1);
+                }
+            }
+            else
+            {
+                if (!Utils.ParseRange(value, out range))
+                {
+                    return new SearchResponse("failed to parse value for 'recent'", -1);
+                }
+                if (range.Start < 1)
+                {
+                    if (range.Start != double.NegativeInfinity)
+                    {
+                        return new SearchResponse("non-positive range is not valid for 'recent'", -1);
+                    }
+                    try
+                    {
+                        range.Start = 1;
+                    }
+                    catch (Exception)
+                    {
+                        return new SearchResponse("non-positive range is not valid for 'recent'", -1);
+                    }
+                }
             }
             if (sortedByLastModified == null)
             {
@@ -702,7 +754,11 @@ namespace SearchPlusPlus
             }
             var idx = sortedByLastModified.IndexOf(musicInfo.uid);
 
-            if (idx == -1 || isTop ? idx >= top : !range.Contains(idx))
+            if (idx == -1)
+            {
+                return SearchResponse.FailedTest;
+            }
+            else if (isTop ? (idx >= top) : !range.Contains(idx))
             {
                 return SearchResponse.FailedTest;
             }
@@ -710,16 +766,41 @@ namespace SearchPlusPlus
         }
         internal static SearchResponse EvalOld(MusicInfo musicInfo, string value)
         {
-            if (value == null)
+            if (!AlbumManager.LoadedAlbumsByUid.ContainsKey(musicInfo.uid))
             {
-                return new SearchResponse("received null value in 'old'", -1);
+                return SearchResponse.FailedTest;
             }
             bool isTop = int.TryParse(value, out int top);
             Range range = null;
 
-            if (!isTop && !Utils.ParseRange(value, out range))
+            if (isTop)
             {
-                return new SearchResponse("failed to parse value for 'old'", -1);
+                if (top < 1)
+                {
+                    return new SearchResponse("non-positive number is not valid for 'old'", -1);
+                }
+            }
+            else
+            {
+                if (!Utils.ParseRange(value, out range))
+                {
+                    return new SearchResponse("failed to parse value for 'old'", -1);
+                }
+                if (range.Start < 1)
+                {
+                    if (range.Start != double.NegativeInfinity)
+                    {
+                        return new SearchResponse("non-positive range is not valid for 'old'", -1);
+                    }
+                    try
+                    {
+                        range.Start = 1;
+                    }
+                    catch (Exception)
+                    {
+                        return new SearchResponse("non-positive range is not valid for 'recent'", -1);
+                    }
+                }
             }
             if (sortedByLastModified == null)
             {
@@ -727,7 +808,11 @@ namespace SearchPlusPlus
             }
             var idx = sortedByLastModified.IndexOf(musicInfo.uid);
 
-            if (idx == -1 || isTop ? (sortedByLastModified.Count-idx) > top : !range.Contains(sortedByLastModified.Count - idx))
+            if (idx == -1)
+            {
+                return SearchResponse.FailedTest;
+            }
+            else if (isTop ? ((sortedByLastModified.Count - idx) > top) : !range.Contains(sortedByLastModified.Count - idx))
             {
                 return SearchResponse.FailedTest;
             }
@@ -746,6 +831,20 @@ namespace SearchPlusPlus
             return albumName.LowerContains(value)
                 ? SearchResponse.PassedTest
                 : SearchResponse.FailedTest;
+        }
+        internal static SearchResponse EvalSort(string value, bool inverse)
+        {
+            if (value == null)
+            {
+                return new SearchResponse("received null value in 'sort'", -1);
+            }
+            if (!ComparisonInfo.IsSorterRegistered(value))
+            {
+                return new SearchResponse($"sorting type '{value}' is not registered", -1);
+            }
+            ComparisonInfo.ActivateSorter(value, inverse);
+            return SearchResponse.PassedTest;
+
         }
         public static SearchResponse Term_Diff(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
         {
@@ -928,6 +1027,14 @@ namespace SearchPlusPlus
             return DBMusicTagDefine.newMusicUids.Contains(musicInfo.uid)
                 ? SearchResponse.PassedTest
                 : SearchResponse.FailedTest;
+        }
+        public static SearchResponse Term_Sort(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            return EvalSort(valueOverride ?? value, false);
+        }
+        public static SearchResponse Term_ReverseSort(MusicInfo musicInfo, PeroString peroString, string value, string valueOverride = null)
+        {
+            return EvalSort(valueOverride ?? value, true);
         }
 
         internal static Dictionary<string, string[]> searchTags = new Dictionary<string, string[]>

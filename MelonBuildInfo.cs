@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SearchPlusPlus
+﻿namespace SearchPlusPlus
 {
     internal static class MelonBuildInfo
     {
@@ -10,7 +8,7 @@ namespace SearchPlusPlus
 
         public const string Author = "PBalint817";
 
-        public const string Version = "4.0.4";
+        public const string Version = "4.3.2";
 
         public const string DownloadLink = "https://github.com/Balint817/SearchPlusPlus";
     }

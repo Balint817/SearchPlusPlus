@@ -132,9 +132,16 @@ namespace SearchPlusPlus
                     {
                         return new SearchResponse($"search error: received unknown key \"{key}\"", -1, groupIdx);
                     }
-                    if (!isTop && !ModMain.RecursionEnabled && key == "def")
+                    if (!isTop && !ModMain.RecursionEnabled)
                     {
-                        return new SearchResponse("search error: the \"def\" tag is not allowed in this context", -1, groupIdx);
+                        if (key == "def")
+                        {
+                            return new SearchResponse("search error: the \"def\" tag is not allowed in this context", -1, groupIdx);
+                        }
+                        if (IsAlias(key))
+                        {
+                            return new SearchResponse($"search error: the alias \"{key}\" is not allowed in this context", -1, groupIdx);
+                        }
                     }
                     var termResult = GetByKey(key)(musicInfo, peroString, term.Value, valueOverride);
 
@@ -187,6 +194,11 @@ namespace SearchPlusPlus
             return true;
         }
 
+        public static bool IsAlias(string alias)
+        {
+            return Aliases.Contains(alias);
+        }
+
         public const string IllegalChars = "\\\": |-";
 
         private static List<string> Aliases = new List<string>();
@@ -230,7 +242,6 @@ namespace SearchPlusPlus
                 registeredKeys.Remove(Aliases[0]);
                 Aliases.RemoveAt(0);
             }
-
         }
         internal static void RegisterAlias(string key, SearchEvaluator function)
         {
