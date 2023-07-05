@@ -18,70 +18,10 @@ using PopupLib;
 using UnityEngine;
 using Assets.Scripts.UI.Panels.PnlMusicTag;
 using Il2CppSystem.Runtime.Remoting.Messaging;
+using KeybindManager;
 
 namespace SearchPlusPlus
 {
-    public class Keybind
-    {
-
-        private KeyCode? _key;
-
-        public KeyCode Key
-        {
-            get
-            {
-                return _key ?? KeyCode.None;
-            }
-        }
-
-        private MelonPreferences_Entry<string> _entry;
-
-        public MelonPreferences_Entry<string> Entry
-        {
-            get
-            {
-                return _entry;
-            }
-            set
-            {
-                if (value == null)
-                {
-                    throw new ArgumentNullException(nameof(value));
-                }
-                _entry = value;
-                Reload();
-            }
-        }
-        public Keybind(MelonPreferences_Entry<string> entry)
-        {
-            Entry = entry;
-            entry.OnValueChanged += ReloadEvent;
-            Reload();
-        }
-
-        private void ReloadEvent(string oldValue, string newValue)
-        {
-            Reload();
-        }
-
-        private void Reload()
-        {
-            if (!Enum.TryParse(Entry.Value, true, out KeyCode result))
-            {
-                if (Entry.Value != Entry.DefaultValue)
-                {
-                    MelonLogger.Error($"Failed to parse key for entry \"{Entry.DisplayName}\", falling back to default key '{Entry.DefaultValue}'");
-                    Entry.Value = Entry.DefaultValue;
-                }
-                else
-                {
-                    MelonLogger.Error($"Failed to parse default for entry \"{Entry.DisplayName}\", go cry to the mod's creator");
-                }
-                return;
-            };
-            _key = result;
-        }
-    }
     public class ModMain : MelonMod
     {
         internal bool isFirstRun = true;
@@ -317,7 +257,8 @@ namespace SearchPlusPlus
 
             MelonLogger.Msg("Hello World!");
 
-            ForumKeybind = new Keybind(category.CreateEntry<string>("ForumKey", "KeypadDivide", description: "\nThe key used to open the in-game forum."));
+            ForumKeybind = new MelonKeybind(category.CreateEntry<string>("ForumKey", "KeypadDivide", description: "\nThe key used to open the in-game forum."));
+            ForumKeybind.OnPress += x => ForumWindow.Show();
 
             seenForumEntry = category.CreateEntry<bool>("SeenForum", false, description: "\nWhether you've seen the in-game forum before");
 
@@ -328,7 +269,7 @@ namespace SearchPlusPlus
             }
         }
 
-        internal static Keybind ForumKeybind;
+        internal static MelonKeybind ForumKeybind;
 
         private void LoadAliases()
         {
@@ -439,14 +380,6 @@ namespace SearchPlusPlus
             {
                 MelonLogger.Msg(ConsoleColor.Red, ex.ToString());
                 MelonLogger.Msg(ConsoleColor.Yellow, "If you're seeing this, then I have absolutely 0 clue how. Either way, the headquarters 'ranked' tag won't work.");
-            }
-        }
-
-        public override void OnUpdate()
-        {
-            if (Input.GetKeyDown(ForumKeybind?.Key ?? KeyCode.None))
-            {
-                ForumWindow.Show();
             }
         }
 

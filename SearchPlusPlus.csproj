@@ -49,6 +49,9 @@
     <Reference Include="Il2Cppmscorlib">
       <HintPath>..\..\..\AppData\Local\fyou\Steam\steamapps\common\Muse Dash\MelonLoader\Managed\Il2Cppmscorlib.dll</HintPath>
     </Reference>
+    <Reference Include="KeybindManager">
+      <HintPath>D:\Steam\steamapps\common\Muse Dash\Mods\KeybindManager.dll</HintPath>
+    </Reference>
     <Reference Include="MelonLoader, Version=0.5.7.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\AppData\Local\fyou\Steam\steamapps\common\Muse Dash\MelonLoader\MelonLoader.dll</HintPath>
